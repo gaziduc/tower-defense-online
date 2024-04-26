@@ -2,8 +2,10 @@
 #include <optional>
 #include <SDL.h>
 #include <SDL_image.h>
+#include <SDL_ttf.h>
 
 #include "Animation.h"
+#include "AnimationEntity.h"
 #include "Constants.h"
 #include "Entity.h"
 #include "ErrorUtils.h"
@@ -15,12 +17,12 @@ int main(int argc, char *argv[]) {
         ErrorUtils::display_last_sdl_error_and_quit(nullptr);
     }
 
-    SDL_Window *window = SDL_CreateWindow(Constants::project_name.c_str(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1920, 1080, SDL_WINDOW_FULLSCREEN);
+    SDL_Window *window = SDL_CreateWindow(Constants::project_name.c_str(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1920, 1080, SDL_WINDOW_FULLSCREEN_DESKTOP);
     if (window == nullptr) {
         ErrorUtils::display_last_sdl_error_and_quit(nullptr);
     }
 
-    SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, 0);
+    SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
     if (renderer == nullptr) {
         ErrorUtils::display_last_sdl_error_and_quit(window);
     }
@@ -31,7 +33,20 @@ int main(int argc, char *argv[]) {
         ErrorUtils::display_last_sdl_error_and_quit(window);
     }
 
+    if (TTF_Init() == -1) {
+        ErrorUtils::display_last_sdl_error_and_quit(window);
+    };
+
     Constants::load_animations(window, renderer);
+    SDL_Texture *background = IMG_LoadTexture(renderer, "resources/images/backgrounds/0.png");
+    if (background == nullptr) {
+        ErrorUtils::display_last_sdl_error_and_quit(window);
+    }
+
+    TTF_Font* font = TTF_OpenFont("resources/fonts/bebasneue-regular.ttf", 70);
+    if (font == nullptr) {
+        ErrorUtils::display_last_sdl_error_and_quit(window);
+    }
 
     FPSmanager fps_manager;
     SDL_initFramerate(&fps_manager);
@@ -143,11 +158,39 @@ int main(int argc, char *argv[]) {
 
 
         // Rendering
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
         SDL_RenderClear(renderer);
-        SDL_SetRenderDrawColor(renderer, 128, 128, 128 ,128);
-        SDL_FRect dst_pos = { .x = 0, .y = row_num * Constants::row_height, .w = 1920, .h = Constants::row_height };
+        for (float x = 0; x < 1920; x += 128) {
+            for (float y = 0; y < Constants::battlefield_height; y += 128) {
+                SDL_FRect dst_tile_pos = { .x = x, .y = y, .w = 128, .h = 128 };
+                SDL_RenderCopyF(renderer, background, nullptr, &dst_tile_pos);
+            }
+        }
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+        SDL_RenderDrawLineF(renderer, 0, Constants::battlefield_height, 1920, Constants::battlefield_height);
+
+        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+        SDL_FRect dst_pos = { .x = 0, .y = Constants::battlefield_height + 1, .w = 1920, .h = 200 };
         SDL_RenderFillRectF(renderer, &dst_pos);
+        AnimationEntity* coin_anim = dynamic_cast<AnimationEntity*>(Constants::get_animation(Constants::COIN).get());
+        SDL_FRect coin_dst_rect = { .x = 1600, .y = Constants::battlefield_height + 30, .w = 80, .h = 80 };
+        SDL_RenderCopyF(renderer, coin_anim->get_texture(), nullptr, &coin_dst_rect);
+        coin_anim->goto_next_texture_index();
+
+        SDL_Surface *text = TTF_RenderText_Shaded(font, "100", {.r = 0, .g = 0, .b = 0, .a = 255}, {.r = 255, .g = 255, .b = 255, .a = 255});
+        SDL_Texture* text_texture = SDL_CreateTextureFromSurface(renderer, text);
+        coin_dst_rect.x += 120;
+        coin_dst_rect.w = text->w;
+        coin_dst_rect.h = text->h;
+        SDL_RenderCopyF(renderer, text_texture, nullptr, &coin_dst_rect);
+        SDL_DestroyTexture(text_texture);
+        SDL_FreeSurface(text);
+
+
+        if (row_num > 0 && row_num < Constants::num_battle_rows) {
+            SDL_SetRenderDrawColor(renderer, 128, 128, 128 ,64);
+            SDL_FRect dst_pos = { .x = 0, .y = row_num * Constants::row_height, .w = 1920, .h = Constants::row_height };
+            SDL_RenderFillRectF(renderer, &dst_pos);
+        }
 
         // Rendering entities
         for (int row_index = 0; row_index < Constants::num_battle_rows; row_index++) {
@@ -169,6 +212,10 @@ int main(int argc, char *argv[]) {
     }
 
 
+    TTF_CloseFont(font);
+    SDL_DestroyTexture(background);
+
+    TTF_Quit();
     IMG_Quit();
     SDL_Quit();
     return 0;

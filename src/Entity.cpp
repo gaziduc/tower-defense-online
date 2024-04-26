@@ -48,7 +48,7 @@ void Entity::set_entity_state(EntityState state) {
 }
 
 SDL_Texture* Entity::get_entity_texture() {
-    return _animations[_entity_state].get_texture(_animation_frame);
+    return _animations[_entity_state]->get_texture(_animation_frame);
 }
 
 SDL_FRect* Entity::get_entity_dst_pos() {
@@ -80,7 +80,7 @@ void Entity::attack(Entity& enemy) {
 }
 
 void Entity::reset_animation_ifn() {
-    if (_animations[_entity_state].get_num_frames() <= _animation_frame) {
+    if (_animations[_entity_state]->get_num_frames() <= _animation_frame) {
         _animation_frame = 0;
     }
 }
@@ -98,7 +98,7 @@ SDL_RendererFlip Entity::get_render_flip_from_direction() {
 float Entity::get_range() {
     switch (_entity_type) {
         case EntityType::GUN_MAN:
-            return 250;
+            return 220;
         case EntityType::SWORD_MAN:
             return 0;
         default:

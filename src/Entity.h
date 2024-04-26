@@ -5,6 +5,8 @@
 #ifndef ENTITY_H
 #define ENTITY_H
 
+#include <memory>
+
 #include "Animation.h"
 
 
@@ -50,7 +52,7 @@ private:
     EntityDirection _entity_direction;
     SDL_FRect _dst_pos;
     unsigned _animation_frame;
-    std::vector<Animation> _animations;
+    std::vector<std::shared_ptr<Animation>> _animations;
     unsigned _row_num;
     int _max_health;
     int _health;
