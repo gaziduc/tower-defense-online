@@ -6,6 +6,7 @@
 
 #include "Constants.h"
 #include "LogUtils.h"
+#include "Player.h"
 
 Entity::Entity(EntityType type, EntityDirection direction, unsigned row_num) {
     unsigned first_anim_index = static_cast<unsigned>(type) * Constants::num_state_per_entity;
@@ -66,13 +67,25 @@ void Entity::move() {
     _dst_pos.x += _entity_direction == EntityDirection::LEFT_TO_RIGHT ? 1.5 : -1.5;
 }
 
-void Entity::attack(Entity& enemy) {
-    if (_entity_state != EntityState::ATTACKING) {
-        set_entity_state(EntityState::ATTACKING);
+void Entity::set_state(EntityState state) {
+    if (_entity_state != state) {
+        set_entity_state(state);
     } else {
         _animation_frame++;
         reset_animation_ifn();
     }
+}
+
+void Entity::attack(Entity& enemy) {
+    set_state(EntityState::ATTACKING);
+
+    if (_animation_frame == 0) {
+        enemy.decrease_health(get_attack_damage());
+    }
+}
+
+void Entity::attack(Player& enemy) {
+    set_state(EntityState::ATTACKING);
 
     if (_animation_frame == 0) {
         enemy.decrease_health(get_attack_damage());

@@ -44,9 +44,18 @@ std::string Events::get_text() {
     return _text;
 }
 
+bool Events::is_mouse_wheel_up() {
+    return _mouse_wheel_y > 0;
+}
+
+bool Events::is_mouse_wheel_down() {
+    return _mouse_wheel_y < 0;
+}
+
 void Events::update_events(SDL_Window *window) {
     _quit = false;
     _text = "";
+    _mouse_wheel_y = 0;
 
     SDL_Event event;
 
@@ -79,6 +88,10 @@ void Events::update_events(SDL_Window *window) {
             case SDL_MOUSEMOTION:
                 _cursor_pos.x = event.motion.x;
                 _cursor_pos.y = event.motion.y;
+            break;
+
+            case SDL_MOUSEWHEEL:
+                _mouse_wheel_y = event.wheel.y;
             break;
 
             // Text

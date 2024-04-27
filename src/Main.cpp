@@ -10,14 +10,17 @@
 #include "Entity.h"
 #include "ErrorUtils.h"
 #include "Events.h"
+#include "Player.h"
+#include "RenderUtils.h"
 #include "framerate/SDL2_framerate.h"
 
 int main(int argc, char *argv[]) {
+    /* Init SDL2 and show window */
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
         ErrorUtils::display_last_sdl_error_and_quit(nullptr);
     }
 
-    SDL_Window *window = SDL_CreateWindow(Constants::project_name.c_str(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1920, 1080, SDL_WINDOW_FULLSCREEN_DESKTOP);
+    SDL_Window *window = SDL_CreateWindow(Constants::project_name.c_str(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1920, 1080, 0);
     if (window == nullptr) {
         ErrorUtils::display_last_sdl_error_and_quit(nullptr);
     }
@@ -27,7 +30,7 @@ int main(int argc, char *argv[]) {
         ErrorUtils::display_last_sdl_error_and_quit(window);
     }
 
-    int img_flags = IMG_INIT_PNG;
+    int img_flags = IMG_INIT_PNG | IMG_INIT_WEBP;
     int img_initted_flags = IMG_Init(img_flags);
     if ((img_initted_flags & img_flags) != img_flags) {
         ErrorUtils::display_last_sdl_error_and_quit(window);
@@ -37,24 +40,23 @@ int main(int argc, char *argv[]) {
         ErrorUtils::display_last_sdl_error_and_quit(window);
     };
 
+    // Load resources
     Constants::load_animations(window, renderer);
     SDL_Texture *background = IMG_LoadTexture(renderer, "resources/images/backgrounds/0.png");
     if (background == nullptr) {
         ErrorUtils::display_last_sdl_error_and_quit(window);
     }
-
-    TTF_Font* font = TTF_OpenFont("resources/fonts/bebasneue-regular.ttf", 70);
-    if (font == nullptr) {
-        ErrorUtils::display_last_sdl_error_and_quit(window);
-    }
+    Constants::load_fonts(window);
 
     FPSmanager fps_manager;
     SDL_initFramerate(&fps_manager);
     SDL_setFramerate(&fps_manager, 60);
 
+    Player player(500, 100);
+
     std::map<unsigned, std::map<Entity::EntityDirection, std::vector<Entity>>> entities_map;
     for (unsigned row_index = 0; row_index < Constants::num_battle_rows; row_index++) {
-        Entity entity_right_to_left(Entity::SWORD_MAN, Entity::RIGHT_TO_LEFT, row_index);
+        Entity entity_right_to_left(player.get_selected_entity_type(), Entity::RIGHT_TO_LEFT, row_index);
         entities_map[row_index][entity_right_to_left.get_entity_direction()].emplace_back(entity_right_to_left);
     }
 
@@ -72,9 +74,22 @@ int main(int argc, char *argv[]) {
         if (events.is_mouse_button_down(SDL_BUTTON_LEFT)) {
             events.release_mouse_button(SDL_BUTTON_LEFT);
             if (row_num >= 0 && row_num < Constants::num_battle_rows) {
-                Entity new_entity(Entity::GUN_MAN, Entity::LEFT_TO_RIGHT, row_num);
+                Entity new_entity(player.get_selected_entity_type(), Entity::LEFT_TO_RIGHT, row_num);
                 entities_map[row_num][Entity::LEFT_TO_RIGHT].emplace_back(new_entity);
             }
+        }
+        if (events.is_mouse_wheel_down()) {
+            int new_selected_type = static_cast<int>(player.get_selected_entity_type()) - 1;
+            if (new_selected_type < 0) {
+                new_selected_type = Entity::EntityType::NUM_ENTITY_TYPE - 1;
+            }
+            player.set_selected_entity_type(static_cast<Entity::EntityType>(new_selected_type));
+        } else if (events.is_mouse_wheel_up()) {
+            int new_selected_type = static_cast<int>(player.get_selected_entity_type()) + 1;
+            if (new_selected_type >= Entity::EntityType::NUM_ENTITY_TYPE) {
+                new_selected_type = 0;
+            }
+            player.set_selected_entity_type(static_cast<Entity::EntityType>(new_selected_type));
         }
 
         // Physics and game
@@ -125,6 +140,8 @@ int main(int argc, char *argv[]) {
             for (Entity& right_to_left: entity_right_to_left_list) {
                 if (left_to_right_entity_first && right_to_left.get_entity_dst_pos()->x - right_to_left.get_range() <= left_to_right_entity_first->get_entity_dst_pos()->x + left_to_right_entity_first->get_entity_dst_pos()->w) {
                     right_to_left.attack(entity_left_to_right_list[left_to_right_first_entity_index]);
+                } else if (!left_to_right_entity_first && right_to_left.get_entity_dst_pos()->x - right_to_left.get_range() <= 0) {
+                    right_to_left.attack(player);
                 } else {
                     right_to_left.move();
                 }
@@ -143,6 +160,7 @@ int main(int argc, char *argv[]) {
             while (entity_rtl_it != entity_right_to_left_list.end()) {
                 if (entity_rtl_it->is_dead()) {
                     entity_rtl_it = entity_right_to_left_list.erase(entity_rtl_it);
+                    player.increase_money(50);
                 } else {
                     entity_rtl_it++;
                 }
@@ -159,34 +177,29 @@ int main(int argc, char *argv[]) {
 
         // Rendering
         SDL_RenderClear(renderer);
+        // Battlefield background
         for (float x = 0; x < 1920; x += 128) {
             for (float y = 0; y < Constants::battlefield_height; y += 128) {
                 SDL_FRect dst_tile_pos = { .x = x, .y = y, .w = 128, .h = 128 };
                 SDL_RenderCopyF(renderer, background, nullptr, &dst_tile_pos);
             }
         }
+        // Bottom menu
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
         SDL_RenderDrawLineF(renderer, 0, Constants::battlefield_height, 1920, Constants::battlefield_height);
-
         SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
         SDL_FRect dst_pos = { .x = 0, .y = Constants::battlefield_height + 1, .w = 1920, .h = 200 };
         SDL_RenderFillRectF(renderer, &dst_pos);
-        AnimationEntity* coin_anim = dynamic_cast<AnimationEntity*>(Constants::get_animation(Constants::COIN).get());
-        SDL_FRect coin_dst_rect = { .x = 1600, .y = Constants::battlefield_height + 30, .w = 80, .h = 80 };
-        SDL_RenderCopyF(renderer, coin_anim->get_texture(), nullptr, &coin_dst_rect);
-        coin_anim->goto_next_texture_index();
+        // Coins
+        dst_pos = { .x = 1680, .y = Constants::battlefield_height + 20, .w = 80, .h = 80 };
+        std::string money_string(std::to_string(player.get_money()));
+        RenderUtils::render_animation_entity_with_text(renderer, Constants::COIN, money_string, &dst_pos);
+        // Health
+        dst_pos.y += 90;
+        std::string health_string(std::to_string(player.get_health()));
+        RenderUtils::render_animation_entity_with_text(renderer, Constants::HEALTH, health_string, &dst_pos);
 
-        SDL_Surface *text = TTF_RenderText_Shaded(font, "100", {.r = 0, .g = 0, .b = 0, .a = 255}, {.r = 255, .g = 255, .b = 255, .a = 255});
-        SDL_Texture* text_texture = SDL_CreateTextureFromSurface(renderer, text);
-        coin_dst_rect.x += 120;
-        coin_dst_rect.w = text->w;
-        coin_dst_rect.h = text->h;
-        SDL_RenderCopyF(renderer, text_texture, nullptr, &coin_dst_rect);
-        SDL_DestroyTexture(text_texture);
-        SDL_FreeSurface(text);
-
-
-        if (row_num > 0 && row_num < Constants::num_battle_rows) {
+        if (row_num >= 0 && row_num < Constants::num_battle_rows) {
             SDL_SetRenderDrawColor(renderer, 128, 128, 128 ,64);
             SDL_FRect dst_pos = { .x = 0, .y = row_num * Constants::row_height, .w = 1920, .h = Constants::row_height };
             SDL_RenderFillRectF(renderer, &dst_pos);
@@ -202,8 +215,13 @@ int main(int argc, char *argv[]) {
                     entity.render_health_bar(renderer);
                 }
             }
-
         }
+        float x = static_cast<float>(events.get_cursor_pos()->x);
+        float y = static_cast<float>(events.get_cursor_pos()->y);
+        dst_pos = {.x = x + 20, .y = y + 20, .w = 64, .h = 0};
+        Constants::Anim cursor_anim = static_cast<Constants::Anim>(player.get_selected_entity_type() * Constants::num_state_per_entity + 3);
+        dst_pos.h = dst_pos.w / dynamic_cast<AnimationEntity*>(Constants::get_animation(cursor_anim).get())->get_ratio();
+        RenderUtils::render_animation_entity(renderer, cursor_anim, &dst_pos);
 
         SDL_RenderPresent(renderer);
 
@@ -211,8 +229,6 @@ int main(int argc, char *argv[]) {
         SDL_framerateDelay(&fps_manager);
     }
 
-
-    TTF_CloseFont(font);
     SDL_DestroyTexture(background);
 
     TTF_Quit();

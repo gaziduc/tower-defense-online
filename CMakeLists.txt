@@ -19,7 +19,11 @@ add_executable(${PROJECT_NAME} src/main.cpp
         src/framerate/SDL2_framerate.cpp
         src/framerate/SDL2_framerate.h
         src/AnimationEntity.cpp
-        src/AnimationEntity.h)
+        src/AnimationEntity.h
+        src/Player.cpp
+        src/Player.h
+        src/RenderUtils.cpp
+        src/RenderUtils.h)
 
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 set(SDL2_PATH "SDL2-2.30.2/x86_64-w64-mingw32")

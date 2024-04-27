@@ -22,8 +22,11 @@ Animation::Animation(SDL_Window *window, SDL_Renderer* renderer, const std::stri
     _num_frames_per_texture = num_frames_per_texture;
 }
 
-Animation::Animation(SDL_Window *window, SDL_Renderer* renderer, const std::string &gif_filename) {
-    IMG_Animation* anim_surfaces = IMG_LoadAnimation(gif_filename.c_str());
+Animation::Animation(SDL_Window *window, SDL_Renderer* renderer, const std::string &anim_filename) {
+    IMG_Animation* anim_surfaces = IMG_LoadAnimation(anim_filename.c_str());
+    if (anim_surfaces == nullptr) {
+        ErrorUtils::display_last_sdl_error_and_quit(window);
+    }
 
     for (int i = 0; i < anim_surfaces->count; i++) {
         SDL_Texture *texture = SDL_CreateTextureFromSurface(renderer, anim_surfaces->frames[i]);

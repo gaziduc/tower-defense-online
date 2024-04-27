@@ -15,6 +15,7 @@ private:
     std::string _text;
     bool _mouse_buttons[5] = { false };
     SDL_Point _cursor_pos = { .x = 0, .y = 0 };
+    int _mouse_wheel_y = 0;
 
 public:
     bool is_quit();
@@ -26,6 +27,8 @@ public:
     bool is_enter_down();
     bool is_escape_down();
     std::string get_text();
+    bool is_mouse_wheel_up();
+    bool is_mouse_wheel_down();
 
     void update_events(SDL_Window *window);
 };

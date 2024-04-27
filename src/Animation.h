@@ -17,7 +17,7 @@ protected:
 public:
     // Constructors
     Animation(SDL_Window *window, SDL_Renderer* renderer, const std::string &sprites_folder, unsigned num_textures, unsigned num_frames_per_texture);
-    Animation(SDL_Window *window, SDL_Renderer* renderer, const std::string &gif_filename);
+    Animation(SDL_Window *window, SDL_Renderer* renderer, const std::string &anim_filename);
 
     // Destructors
     virtual ~Animation() = default;

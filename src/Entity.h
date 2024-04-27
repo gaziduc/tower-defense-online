@@ -10,17 +10,22 @@
 #include "Animation.h"
 
 
+class Player;
+
 class Entity {
 public:
     enum EntityType {
         SWORD_MAN = 0,
-        GUN_MAN
+        GUN_MAN,
+
+        NUM_ENTITY_TYPE
     };
 
     enum EntityState {
         RUNNING = 0,
         ATTACKING,
-        HURT
+        HURT,
+        IDLE
     };
 
     enum EntityDirection {
@@ -35,6 +40,7 @@ public:
     SDL_FRect* get_entity_dst_pos();
     void move();
     void attack(Entity& enemy);
+    void attack(Player& enemy);
     void reset_animation_ifn();
     EntityDirection get_entity_direction();
     SDL_RendererFlip get_render_flip_from_direction();
@@ -56,6 +62,8 @@ private:
     unsigned _row_num;
     int _max_health;
     int _health;
+
+    void set_state(EntityState state);
 };
 
 
