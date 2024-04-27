@@ -3,7 +3,9 @@ project(tower-defense-online)
 
 set(CMAKE_CXX_STANDARD 20)
 
-add_executable(${PROJECT_NAME} src/main.cpp
+add_executable(${PROJECT_NAME}
+        resources.rc
+        src/Main.cpp
         src/ErrorUtils.cpp
         src/ErrorUtils.h
         src/Animation.cpp
@@ -23,17 +25,44 @@ add_executable(${PROJECT_NAME} src/main.cpp
         src/Player.cpp
         src/Player.h
         src/RenderUtils.cpp
-        src/RenderUtils.h)
+        src/RenderUtils.h
+        src/IPv4.cpp
+        src/IPv4.h)
 
-set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
-set(SDL2_PATH "SDL2-2.30.2/x86_64-w64-mingw32")
-set(SDL2_IMAGE_PATH "SDL2_image-2.8.2/x86_64-w64-mingw32")
-set(SDL2_TTF_PATH "SDL2_ttf-2.22.0/x86_64-w64-mingw32")
+add_executable(${PROJECT_NAME}-server
+        resources.rc
+        src/server/Main.cpp
+        src/server/Colors.cpp
+        src/server/Colors.h
+        src/server/ServerConstants.h
+        src/IPv4.cpp
+        src/IPv4.h)
 
-find_package(SDL2 REQUIRED)
+set(CMAKE_PREFIX_PATH
+        ${CMAKE_SOURCE_DIR}/SDL2-2.30.2/cmake
+        ${CMAKE_SOURCE_DIR}/SDL2_image-2.8.2/cmake
+        ${CMAKE_SOURCE_DIR}/SDL2_mixer-2.8.0/cmake
+        ${CMAKE_SOURCE_DIR}/SDL2_net-2.2.0/cmake
+        ${CMAKE_SOURCE_DIR}/SDL2_ttf-2.22.0/cmake
+)
+
+find_package(SDL2 REQUIRED CONFIG REQUIRED COMPONENTS SDL2)
+find_package(SDL2 REQUIRED CONFIG COMPONENTS SDL2main)
 find_package(SDL2_image REQUIRED)
+find_package(SDL2_mixer REQUIRED)
+find_package(SDL2_net REQUIRED)
 find_package(SDL2_ttf REQUIRED)
 
-include_directories(${SDL2_INCLUDE_DIR} ${SDL2_IMAGE_INCLUDE_DIR} ${SDL2_TTF_INCLUDE_DIR})
-target_link_libraries(${PROJECT_NAME} ${SDL2_LIBRARY} ${SDL2_IMAGE_LIBRARY} ${SDL2_TTF_LIBRARY})
-target_link_libraries(${PROJECT_NAME} -static)
+if (TARGET SDL2::SDL2main)
+    target_link_libraries(${PROJECT_NAME} PRIVATE SDL2::SDL2main)
+    target_link_libraries(${PROJECT_NAME}-server PRIVATE SDL2::SDL2main)
+endif ()
+
+target_link_libraries(${PROJECT_NAME} PRIVATE
+        SDL2::SDL2
+        SDL2_image::SDL2_image
+        SDL2_mixer::SDL2_mixer
+        SDL2_net::SDL2_net
+        SDL2_ttf::SDL2_ttf
+)
+target_link_libraries(${PROJECT_NAME}-server PRIVATE SDL2::SDL2 SDL2_net::SDL2_net)

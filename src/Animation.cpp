@@ -14,7 +14,7 @@ Animation::Animation(SDL_Window *window, SDL_Renderer* renderer, const std::stri
         std::string image_path = sprites_folder + '/' + std::to_string(i) + ".png";
         SDL_Texture *texture = IMG_LoadTexture(renderer, image_path.c_str());
         if (texture == nullptr) {
-            ErrorUtils::display_last_sdl_error_and_quit(window);
+            ErrorUtils::display_last_img_error_and_quit(window);
         }
         _textures.push_back(texture);
     }
@@ -25,7 +25,7 @@ Animation::Animation(SDL_Window *window, SDL_Renderer* renderer, const std::stri
 Animation::Animation(SDL_Window *window, SDL_Renderer* renderer, const std::string &anim_filename) {
     IMG_Animation* anim_surfaces = IMG_LoadAnimation(anim_filename.c_str());
     if (anim_surfaces == nullptr) {
-        ErrorUtils::display_last_sdl_error_and_quit(window);
+        ErrorUtils::display_last_img_error_and_quit(window);
     }
 
     for (int i = 0; i < anim_surfaces->count; i++) {

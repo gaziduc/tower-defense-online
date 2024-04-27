@@ -140,6 +140,19 @@ bool Entity::is_dead() {
     return _health <= 0;
 }
 
+int Entity::get_cost() {
+    switch (_entity_type) {
+        case SWORD_MAN:
+            return 40;
+        case GUN_MAN:
+            return 30;
+        default:
+            LogUtils::log_message(LogUtils::ERROR, "Unknown entity type: " + _entity_type);
+            return 0;
+    }
+}
+
+
 
 void Entity::render_health_bar(SDL_Renderer *renderer) {
     SDL_FRect dst_rect = {

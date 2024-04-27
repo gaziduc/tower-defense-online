@@ -46,7 +46,7 @@ void Constants::load_animations(SDL_Window *window, SDL_Renderer *renderer) {
 void Constants::load_fonts(SDL_Window *window) {
     TTF_Font* font = TTF_OpenFont("resources/fonts/bebasneue-regular.ttf", 70);
     if (font == nullptr) {
-        ErrorUtils::display_last_sdl_error_and_quit(window);
+        ErrorUtils::display_last_ttf_error_and_quit(window);
     }
 
     _fonts.push_back(font);

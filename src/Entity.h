@@ -48,6 +48,7 @@ public:
     void decrease_health(int health_to_decrease);
     int get_attack_damage();
     bool is_dead();
+    int get_cost();
 
     // Rendering
     void render_health_bar(SDL_Renderer *renderer);
