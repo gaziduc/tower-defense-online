@@ -41,15 +41,23 @@ public:
         NUM_FONT
     };
 
-    inline static const std::string project_name = "Tower Defense Online";
-    inline static const std::string project_error_title = project_name + " Error";
-    static constexpr unsigned num_state_per_entity = 4;
-    static constexpr unsigned num_battle_rows = 8;
-    static constexpr float row_height = 110;
-    static constexpr float battlefield_height = num_battle_rows * row_height;
-    static constexpr float entity_height = 100;
-    static constexpr float health_bar_width = 80;
-    static constexpr float health_bar_height = 5;
+    inline static const std::string PROJECT_NAME = "Tower Defense Online";
+    inline static const std::string PROJECT_ERROR_TITLE = PROJECT_NAME + " Error";
+    static constexpr unsigned NUM_STATE_PER_ENTITY = 4;
+    static constexpr unsigned NUM_BATTLE_ROWS = 8;
+    static constexpr float ROW_HEIGHT = 110;
+    static constexpr float BATTLEFIELD_HEIGHT = NUM_BATTLE_ROWS * ROW_HEIGHT;
+    static constexpr float ENTITY_HEIGHT = 100;
+    static constexpr float HEALTH_BAR_WIDTH = 80;
+    static constexpr float HEALTH_BAR_HEIGHT = 5;
+    // If you change the following lines, update src/server/ServerConstants.h
+    static constexpr int INITIAL_PLAYER_HEALTH = 500;
+    static constexpr int INITIAL_PLAYER_MONEY = 200;
+    static constexpr int MAX_MESSAGE_SIZE = 1024;
+    static constexpr char WORD_DELIMITER = ' ';
+    static constexpr char MESSAGE_DELIMITER = '\n';
+    inline static const std::string MESSAGE_NEW_ENTITY = "NEW_ENTITY";
+    inline static const std::string MESSAGE_START = "START";
 
     static void load_animations(SDL_Window *window, SDL_Renderer *renderer);
     static void load_fonts(SDL_Window *window);

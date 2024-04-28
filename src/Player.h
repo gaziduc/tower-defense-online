@@ -4,6 +4,8 @@
 
 #ifndef PLAYER_H
 #define PLAYER_H
+#include <map>
+
 #include "Entity.h"
 
 
@@ -13,6 +15,8 @@ private:
     int _health;
     int _money;
     Entity::EntityType _selected_entity_type;
+    std::map<unsigned, std::vector<Entity>> _entities_map;
+    Entity::EntityDirection _direction;
 
 public:
     Player(int initial_health, int initial_money);
@@ -24,6 +28,9 @@ public:
     int get_money();
     Entity::EntityType get_selected_entity_type();
     void set_selected_entity_type(Entity::EntityType selected_entity_type);
+    std::map<unsigned, std::vector<Entity>>& get_entities_map();
+    Entity::EntityDirection get_direction();
+    void set_direction(Entity::EntityDirection direction);
 };
 
 

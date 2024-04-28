@@ -14,7 +14,7 @@ public:
         DEBUG,
         INFO,
         WARN,
-        ERROR
+        SEVERE
     };
 
     static std::string get_level_string(Level level);

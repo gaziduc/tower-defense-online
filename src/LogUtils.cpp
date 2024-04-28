@@ -16,8 +16,8 @@ std::string LogUtils::get_level_string(Level level) {
             return "INFO";
         case WARN:
             return "WARN";
-        case ERROR:
-            return "ERROR";
+        case SEVERE:
+            return "SEVERE";
         default:
             return "DEFAULT";
     }

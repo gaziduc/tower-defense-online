@@ -10,7 +10,7 @@
 #endif
 
 
-void Colors::enable_colors() {
+void Colors::enable_colors_ifn() {
 #ifdef _WIN32
     HANDLE handleOut = GetStdHandle(STD_OUTPUT_HANDLE);
     DWORD consoleMode;

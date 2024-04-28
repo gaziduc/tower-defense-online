@@ -36,7 +36,14 @@ add_executable(${PROJECT_NAME}-server
         src/server/Colors.h
         src/server/ServerConstants.h
         src/IPv4.cpp
-        src/IPv4.h)
+        src/IPv4.h
+        src/server/ServerPlayer.cpp
+        src/server/ServerPlayer.h
+        src/server/ServerEntity.cpp
+        src/server/ServerEntity.h
+        src/LogUtils.cpp
+        src/LogUtils.h
+)
 
 set(CMAKE_PREFIX_PATH
         ${CMAKE_SOURCE_DIR}/SDL2-2.30.2/cmake
@@ -45,6 +52,9 @@ set(CMAKE_PREFIX_PATH
         ${CMAKE_SOURCE_DIR}/SDL2_net-2.2.0/cmake
         ${CMAKE_SOURCE_DIR}/SDL2_ttf-2.22.0/cmake
 )
+
+# To build tower-defense-online-server, uncomment to following line (but let it commented for tower-defense-online):
+set(SDL2_NO_MWINDOWS true)
 
 find_package(SDL2 REQUIRED CONFIG REQUIRED COMPONENTS SDL2)
 find_package(SDL2 REQUIRED CONFIG COMPONENTS SDL2main)

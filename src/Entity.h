@@ -6,6 +6,7 @@
 #define ENTITY_H
 
 #include <memory>
+#include <optional>
 
 #include "Animation.h"
 
@@ -29,12 +30,15 @@ public:
     };
 
     enum EntityDirection {
+        UNDEFINED = -1,
         LEFT_TO_RIGHT = 0,
         RIGHT_TO_LEFT,
         NUM_DIRECTIONS
     };
 
     Entity(EntityType type, EntityDirection direction, unsigned row_num);
+    EntityType get_entity_type();
+    int get_row_num();
     void set_entity_state(EntityState state);
     SDL_Texture* get_entity_texture();
     SDL_FRect* get_entity_dst_pos();
@@ -49,6 +53,8 @@ public:
     int get_attack_damage();
     bool is_dead();
     int get_cost();
+    bool can_attack_entity(std::optional<Entity>& enemy_entity_first);
+    bool can_attack_player(std::optional<Entity>& enemy_entity_first);
 
     // Rendering
     void render_health_bar(SDL_Renderer *renderer);

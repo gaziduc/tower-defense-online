@@ -9,7 +9,7 @@
 
 class Colors {
 public:
-    static void enable_colors();
+    static void enable_colors_ifn();
     static std::string yellow();
     static std::string green();
     static std::string cyan();
