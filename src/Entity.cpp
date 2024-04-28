@@ -180,12 +180,12 @@ bool Entity::can_attack_player(std::optional<Entity>& enemy_entity_first) {
 
 
 
-void Entity::render_health_bar(SDL_Renderer *renderer) {
+void Entity::render_health_bar(SDL_Renderer *renderer, float ratio_x, float ratio_y) {
     SDL_FRect dst_rect = {
-        .x = _dst_pos.x + _dst_pos.w / 2 - Constants::HEALTH_BAR_WIDTH / 2,
-        .y = _dst_pos.y - Constants::HEALTH_BAR_HEIGHT,
-        .w = Constants::HEALTH_BAR_WIDTH,
-        .h = Constants::HEALTH_BAR_HEIGHT
+        .x = (_dst_pos.x + _dst_pos.w / 2 - Constants::HEALTH_BAR_WIDTH / 2) * ratio_x,
+        .y = (_dst_pos.y - Constants::HEALTH_BAR_HEIGHT) * ratio_y,
+        .w = Constants::HEALTH_BAR_WIDTH * ratio_x,
+        .h = Constants::HEALTH_BAR_HEIGHT * ratio_y
     };
     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 192);
     SDL_RenderFillRectF(renderer, &dst_rect);

@@ -57,7 +57,7 @@ public:
     bool can_attack_player(std::optional<Entity>& enemy_entity_first);
 
     // Rendering
-    void render_health_bar(SDL_Renderer *renderer);
+    void render_health_bar(SDL_Renderer *renderer, float ratio_x, float ratio_y);
 
 private:
     EntityType _entity_type;

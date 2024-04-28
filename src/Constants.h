@@ -43,6 +43,8 @@ public:
 
     inline static const std::string PROJECT_NAME = "Tower Defense Online";
     inline static const std::string PROJECT_ERROR_TITLE = PROJECT_NAME + " Error";
+    static constexpr unsigned VIEWPORT_WIDTH = 1920;
+    static constexpr unsigned VIEWPORT_HEIGHT = 1080;
     static constexpr unsigned NUM_STATE_PER_ENTITY = 4;
     static constexpr unsigned NUM_BATTLE_ROWS = 8;
     static constexpr float ROW_HEIGHT = 110;

@@ -26,7 +26,7 @@ int main(int argc, char *argv[]) {
         ErrorUtils::display_last_sdl_error_and_quit(nullptr);
     }
 
-    SDL_Window *window = SDL_CreateWindow(Constants::PROJECT_NAME.c_str(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1820, 1000, SDL_WINDOW_RESIZABLE);
+    SDL_Window *window = SDL_CreateWindow(Constants::PROJECT_NAME.c_str(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1600, 900, SDL_WINDOW_RESIZABLE);
     if (window == nullptr) {
         ErrorUtils::display_last_sdl_error_and_quit(nullptr);
     }
@@ -285,31 +285,37 @@ int main(int argc, char *argv[]) {
 
         // Rendering
         SDL_RenderClear(renderer);
+
+        SDL_Point window_size;
+        SDL_GetWindowSize(window, &window_size.x, &window_size.y);
+        float ratio_x = static_cast<float>(window_size.x) / Constants::VIEWPORT_WIDTH;
+        float ratio_y = static_cast<float>(window_size.y) / Constants::VIEWPORT_HEIGHT;
+
         // Battlefield background
-        for (float x = 0; x < 1920; x += 128) {
-            for (float y = 0; y < Constants::BATTLEFIELD_HEIGHT; y += 128) {
-                SDL_FRect dst_tile_pos = { .x = x, .y = y, .w = 128, .h = 128 };
+        for (float x = 0; x < Constants::VIEWPORT_WIDTH; x += 128 * ratio_x) {
+            for (float y = 0; y < Constants::BATTLEFIELD_HEIGHT; y += 128 * ratio_y) {
+                SDL_FRect dst_tile_pos = { .x = x, .y = y, .w = 128 * ratio_x, .h = 128 * ratio_y };
                 SDL_RenderCopyF(renderer, background, nullptr, &dst_tile_pos);
             }
         }
         // Bottom menu
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
-        SDL_RenderDrawLineF(renderer, 0, Constants::BATTLEFIELD_HEIGHT, 1920, Constants::BATTLEFIELD_HEIGHT);
+        SDL_RenderDrawLineF(renderer, 0, Constants::BATTLEFIELD_HEIGHT * ratio_y, Constants::VIEWPORT_WIDTH * ratio_x, Constants::BATTLEFIELD_HEIGHT * ratio_y);
         SDL_SetRenderDrawColor(renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
-        SDL_FRect dst_pos = { .x = 0, .y = Constants::BATTLEFIELD_HEIGHT + 1, .w = 1920, .h = 200 };
+        SDL_FRect dst_pos = { .x = 0, .y = (Constants::BATTLEFIELD_HEIGHT + 1) * ratio_y, .w = Constants::VIEWPORT_WIDTH * ratio_x, .h = 200 * ratio_y };
         SDL_RenderFillRectF(renderer, &dst_pos);
         // Coins
-        dst_pos = { .x = 1680, .y = Constants::BATTLEFIELD_HEIGHT + 20, .w = 80, .h = 80 };
+        dst_pos = { .x = 1680 * ratio_x, .y = (Constants::BATTLEFIELD_HEIGHT + 20) * ratio_y, .w = 80 * ratio_x, .h = 80 * ratio_y };
         std::string money_string(std::to_string(player.get_money()));
         RenderUtils::render_animation_entity_with_text(window, renderer, Constants::COIN, money_string, &dst_pos);
         // Health
-        dst_pos.y += 90;
+        dst_pos.y += 90 * ratio_y;
         std::string health_string(std::to_string(player.get_health()));
         RenderUtils::render_animation_entity_with_text(window, renderer, Constants::HEALTH, health_string, &dst_pos);
 
         if (row_num >= 0 && row_num < Constants::NUM_BATTLE_ROWS) {
             SDL_SetRenderDrawColor(renderer, 128, 128, 128 ,64);
-            SDL_FRect dst_pos = { .x = 0, .y = row_num * Constants::ROW_HEIGHT, .w = 1920, .h = Constants::ROW_HEIGHT };
+            SDL_FRect dst_pos = { .x = 0, .y = row_num * Constants::ROW_HEIGHT * ratio_y, .w = Constants::VIEWPORT_WIDTH * ratio_x, .h = Constants::ROW_HEIGHT * ratio_y };
             SDL_RenderFillRectF(renderer, &dst_pos);
         }
 
@@ -317,18 +323,22 @@ int main(int argc, char *argv[]) {
         for (int row_index = 0; row_index < Constants::NUM_BATTLE_ROWS; row_index++) {
             std::vector<Entity> entity_list = player.get_entities_map()[row_index];
             for (Entity& entity : entity_list) {
-                SDL_RenderCopyExF(renderer, entity.get_entity_texture(), nullptr, entity.get_entity_dst_pos(), 0, nullptr, entity.get_render_flip_from_direction());
-                entity.render_health_bar(renderer);
+                SDL_FRect* entity_dst_pos = entity.get_entity_dst_pos();
+                SDL_FRect entity_render_pos = {.x = entity_dst_pos->x * ratio_x, .y = entity_dst_pos->y * ratio_y, .w = entity_dst_pos->w * ratio_x, .h = entity_dst_pos->h * ratio_y};
+                SDL_RenderCopyExF(renderer, entity.get_entity_texture(), nullptr, &entity_render_pos, 0, nullptr, entity.get_render_flip_from_direction());
+                entity.render_health_bar(renderer, ratio_x, ratio_y);
             }
             std::vector<Entity> enemy_entity_list = enemy_player.get_entities_map()[row_index];
             for (Entity& entity : enemy_entity_list) {
-                SDL_RenderCopyExF(renderer, entity.get_entity_texture(), nullptr, entity.get_entity_dst_pos(), 0, nullptr, entity.get_render_flip_from_direction());
-                entity.render_health_bar(renderer);
+                SDL_FRect* entity_dst_pos = entity.get_entity_dst_pos();
+                SDL_FRect entity_render_pos = {.x = entity_dst_pos->x * ratio_x, .y = entity_dst_pos->y * ratio_y, .w = entity_dst_pos->w * ratio_x, .h = entity_dst_pos->h * ratio_y};
+                SDL_RenderCopyExF(renderer, entity.get_entity_texture(), nullptr, &entity_render_pos, 0, nullptr, entity.get_render_flip_from_direction());
+                entity.render_health_bar(renderer, ratio_x, ratio_y);
             }
         }
         float x = static_cast<float>(events.get_cursor_pos()->x);
         float y = static_cast<float>(events.get_cursor_pos()->y);
-        dst_pos = {.x = x + 20, .y = y + 20, .w = 0, .h = 64};
+        dst_pos = {.x = (x + 20) * ratio_x, .y = (y + 20) * ratio_y, .w = 0, .h = 64 * ratio_y};
         Constants::Anim cursor_anim = static_cast<Constants::Anim>(player.get_selected_entity_type() * Constants::NUM_STATE_PER_ENTITY + 3);
         dst_pos.w = dst_pos.h * dynamic_cast<AnimationEntity*>(Constants::get_animation(cursor_anim).get())->get_ratio();
         RenderUtils::render_animation_entity(renderer, cursor_anim, &dst_pos);
