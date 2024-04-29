@@ -52,6 +52,7 @@ public:
     static constexpr float ENTITY_HEIGHT = 100;
     static constexpr float HEALTH_BAR_WIDTH = 80;
     static constexpr float HEALTH_BAR_HEIGHT = 5;
+    static constexpr float SDL_POS_X_CENTERED = -420000;
     // If you change the following lines, update src/server/ServerConstants.h
     static constexpr int INITIAL_PLAYER_HEALTH = 500;
     static constexpr int INITIAL_PLAYER_MONEY = 200;

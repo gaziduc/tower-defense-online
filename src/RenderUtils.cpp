@@ -15,7 +15,7 @@ void RenderUtils::render_animation_entity(SDL_Renderer* renderer, Constants::Ani
     animation_entity->goto_next_texture_index();
 }
 
-void RenderUtils::render_text_shaded(SDL_Window* window, SDL_Renderer* renderer, std::string& text, SDL_FRect* dst_pos, SDL_Color fg_color, SDL_Color bg_color) {
+void RenderUtils::render_text_shaded(SDL_Window* window, SDL_Renderer* renderer, std::string& text, SDL_FRect* dst_pos, SDL_Color fg_color, SDL_Color bg_color, float ratio_x, float ratio_y) {
     if (text.empty()) {
         return;
     }
@@ -24,16 +24,36 @@ void RenderUtils::render_text_shaded(SDL_Window* window, SDL_Renderer* renderer,
         ErrorUtils::display_last_sdl_error_and_quit(window);
     }
     SDL_Texture* text_texture = SDL_CreateTextureFromSurface(renderer, text_surface);
-    SDL_FRect text_pos = { .x = dst_pos->x, .y = dst_pos->y, .w = static_cast<float>(text_surface->w), .h = static_cast<float>(text_surface->h) };
+    dst_pos->w = static_cast<float>(text_surface->w) * ratio_x;
+    dst_pos->h = static_cast<float>(text_surface->h) * ratio_y;
+
+    if (dst_pos->x == Constants::SDL_POS_X_CENTERED) {
+        int window_size_x;
+        SDL_GetWindowSize(window, &window_size_x, nullptr);
+        dst_pos->x = window_size_x / 2 - dst_pos->w / 2;
+    } else {
+        dst_pos->x *= ratio_x;
+    }
+    dst_pos->y *= ratio_y;
+
+    SDL_FRect text_pos = { .x = dst_pos->x, .y = dst_pos->y, .w = dst_pos->w, .h = dst_pos->h };
     SDL_RenderCopyF(renderer, text_texture, nullptr, &text_pos);
     SDL_DestroyTexture(text_texture);
     SDL_FreeSurface(text_surface);
 }
 
-void RenderUtils::render_animation_entity_with_text(SDL_Window* window, SDL_Renderer* renderer, Constants::Anim anim, std::string& text, SDL_FRect* dst_pos) {
+void RenderUtils::render_animation_entity_with_text(SDL_Window* window, SDL_Renderer* renderer, Constants::Anim anim, std::string& text, SDL_FRect* dst_pos, float ratio_x, float ratio_y) {
+    SDL_FRect old_dst_pos = {.x = dst_pos->x, .y = dst_pos->y, .w = dst_pos->w, .h = dst_pos->h};
+    dst_pos->x *= ratio_x;
+    dst_pos->y *= ratio_y;
+    dst_pos->w *= ratio_x;
+    dst_pos->h *= ratio_y;
     render_animation_entity(renderer, anim, dst_pos);
-    float old_dst_pos_x = dst_pos->x;
-    dst_pos->x += dst_pos->w + 20;
-    render_text_shaded(window, renderer, text, dst_pos, {.r = 0, .g = 0, .b = 0, .a = SDL_ALPHA_OPAQUE},  {.r = 255, .g = 255, .b = 255, .a = SDL_ALPHA_OPAQUE});
-    dst_pos->x = old_dst_pos_x;
+    dst_pos->x = old_dst_pos.x + old_dst_pos.w + 20;
+    dst_pos->y = old_dst_pos.y;
+    dst_pos->w = old_dst_pos.w;
+    dst_pos->h = old_dst_pos.h;
+    render_text_shaded(window, renderer, text, dst_pos, {.r = 0, .g = 0, .b = 0, .a = SDL_ALPHA_OPAQUE},  {.r = 255, .g = 255, .b = 255, .a = SDL_ALPHA_OPAQUE}, ratio_x, ratio_y);
+    dst_pos->x = old_dst_pos.x;
+    dst_pos->y = old_dst_pos.y;
 }

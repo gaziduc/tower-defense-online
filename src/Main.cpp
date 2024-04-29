@@ -88,7 +88,6 @@ int main(int argc, char *argv[]) {
     std::string input;
 
     bool connected = false;
-    SDL_FRect dst_pos = {.x = 0, .y = 0, .w = 0, .h = 0};
     while (!connected) {
         events.update_events(window);
         if (events.is_quit()) {
@@ -113,31 +112,35 @@ int main(int argc, char *argv[]) {
 
             IPaddress ip;
             if (SDLNet_ResolveHost(&ip, input.c_str(), 7777) == -1) {
-                // ErrorUtils::display_last_net_error_and_quit(window);
+                ErrorUtils::display_last_net_error_and_quit(window);
             }
 
             socket = SDLNet_TCP_Open(&ip);
             if (socket == nullptr) {
-                // ErrorUtils::display_last_net_error_and_quit(window);
+                ErrorUtils::display_last_net_error_and_quit(window);
             }
 
             SDLNet_TCP_AddSocket(socket_set, socket);
             connected = true;
         }
 
+        SDL_Point window_size;
+        SDL_GetWindowSize(window, &window_size.x, &window_size.y);
+        float ratio_x = static_cast<float>(window_size.x) / Constants::VIEWPORT_WIDTH;
+        float ratio_y = static_cast<float>(window_size.y) / Constants::VIEWPORT_HEIGHT;
+
         SDL_RenderClear(renderer);
         std::string enter_ip = "Enter the server IP address or hostname:";
-        dst_pos.y = 0;
-        RenderUtils::render_text_shaded(window, renderer, enter_ip, &dst_pos, {.r = 255, .g = 255, .b = 255, .a = SDL_ALPHA_OPAQUE},  {.r = 0, .g = 0, .b = 0, .a = SDL_ALPHA_OPAQUE});
-        dst_pos.y = 100;
-        RenderUtils::render_text_shaded(window, renderer, input, &dst_pos, {.r = 255, .g = 255, .b = 255, .a = SDL_ALPHA_OPAQUE},  {.r = 0, .g = 0, .b = 0, .a = SDL_ALPHA_OPAQUE});
+        SDL_FRect dst_pos = {.x = Constants::SDL_POS_X_CENTERED, .y = 450, .w = 0, .h = 0};
+        RenderUtils::render_text_shaded(window, renderer, enter_ip, &dst_pos, {.r = 255, .g = 255, .b = 255, .a = SDL_ALPHA_OPAQUE},  {.r = 0, .g = 0, .b = 0, .a = SDL_ALPHA_OPAQUE}, ratio_x, ratio_y);
+        dst_pos = {.x = Constants::SDL_POS_X_CENTERED, .y = 550, .w = 0, .h = 0};
+        RenderUtils::render_text_shaded(window, renderer, input, &dst_pos, {.r = 255, .g = 255, .b = 255, .a = SDL_ALPHA_OPAQUE},  {.r = 0, .g = 0, .b = 0, .a = SDL_ALPHA_OPAQUE}, ratio_x, ratio_y);
         SDL_RenderPresent(renderer);
 
         SDL_framerateDelay(&fps_manager);
     }
 
     SDL_StopTextInput();
-    dst_pos.y = 0;
 
     Player player(Constants::INITIAL_PLAYER_HEALTH, Constants::INITIAL_PLAYER_MONEY);
     Player enemy_player(Constants::INITIAL_PLAYER_HEALTH, Constants::INITIAL_PLAYER_MONEY);
@@ -155,9 +158,15 @@ int main(int argc, char *argv[]) {
             game_started = true;
         }
 
+        SDL_Point window_size;
+        SDL_GetWindowSize(window, &window_size.x, &window_size.y);
+        float ratio_x = static_cast<float>(window_size.x) / Constants::VIEWPORT_WIDTH;
+        float ratio_y = static_cast<float>(window_size.y) / Constants::VIEWPORT_HEIGHT;
+
         SDL_RenderClear(renderer);
         std::string waiting_text = "Waiting for another player...";
-        RenderUtils::render_text_shaded(window, renderer, waiting_text, &dst_pos, {.r = 255, .g = 255, .b = 255, .a = SDL_ALPHA_OPAQUE},  {.r = 0, .g = 0, .b = 0, .a = SDL_ALPHA_OPAQUE});
+        SDL_FRect dst_pos = {.x = Constants::SDL_POS_X_CENTERED, .y = 500, .w = 0, .h = 0};
+        RenderUtils::render_text_shaded(window, renderer, waiting_text, &dst_pos, {.r = 255, .g = 255, .b = 255, .a = SDL_ALPHA_OPAQUE},  {.r = 0, .g = 0, .b = 0, .a = SDL_ALPHA_OPAQUE}, ratio_x, ratio_y);
         SDL_RenderPresent(renderer);
 
 
@@ -176,7 +185,12 @@ int main(int argc, char *argv[]) {
 
         handle_server_actions(window, socket_set, socket, player, enemy_player);
 
-        int row_num = static_cast<int>(static_cast<float>(events.get_cursor_pos()->y) / Constants::ROW_HEIGHT);
+        SDL_Point window_size;
+        SDL_GetWindowSize(window, &window_size.x, &window_size.y);
+        float ratio_x = static_cast<float>(window_size.x) / Constants::VIEWPORT_WIDTH;
+        float ratio_y = static_cast<float>(window_size.y) / Constants::VIEWPORT_HEIGHT;
+
+        int row_num = static_cast<int>(static_cast<float>(events.get_cursor_pos()->y) / (Constants::ROW_HEIGHT * ratio_y));
         if (events.is_mouse_button_down(SDL_BUTTON_LEFT)) {
             events.release_mouse_button(SDL_BUTTON_LEFT);
             if (row_num >= 0 && row_num < Constants::NUM_BATTLE_ROWS) {
@@ -286,11 +300,6 @@ int main(int argc, char *argv[]) {
         // Rendering
         SDL_RenderClear(renderer);
 
-        SDL_Point window_size;
-        SDL_GetWindowSize(window, &window_size.x, &window_size.y);
-        float ratio_x = static_cast<float>(window_size.x) / Constants::VIEWPORT_WIDTH;
-        float ratio_y = static_cast<float>(window_size.y) / Constants::VIEWPORT_HEIGHT;
-
         // Battlefield background
         for (float x = 0; x < Constants::VIEWPORT_WIDTH; x += 128 * ratio_x) {
             for (float y = 0; y < Constants::BATTLEFIELD_HEIGHT; y += 128 * ratio_y) {
@@ -305,13 +314,13 @@ int main(int argc, char *argv[]) {
         SDL_FRect dst_pos = { .x = 0, .y = (Constants::BATTLEFIELD_HEIGHT + 1) * ratio_y, .w = Constants::VIEWPORT_WIDTH * ratio_x, .h = 200 * ratio_y };
         SDL_RenderFillRectF(renderer, &dst_pos);
         // Coins
-        dst_pos = { .x = 1680 * ratio_x, .y = (Constants::BATTLEFIELD_HEIGHT + 20) * ratio_y, .w = 80 * ratio_x, .h = 80 * ratio_y };
+        dst_pos = { .x = 1680, .y = Constants::BATTLEFIELD_HEIGHT + 20, .w = 80, .h = 80 };
         std::string money_string(std::to_string(player.get_money()));
-        RenderUtils::render_animation_entity_with_text(window, renderer, Constants::COIN, money_string, &dst_pos);
+        RenderUtils::render_animation_entity_with_text(window, renderer, Constants::COIN, money_string, &dst_pos, ratio_x, ratio_y);
         // Health
-        dst_pos.y += 90 * ratio_y;
+        dst_pos = { .x = 1680, .y = Constants::BATTLEFIELD_HEIGHT + 100, .w = 80, .h = 80 };
         std::string health_string(std::to_string(player.get_health()));
-        RenderUtils::render_animation_entity_with_text(window, renderer, Constants::HEALTH, health_string, &dst_pos);
+        RenderUtils::render_animation_entity_with_text(window, renderer, Constants::HEALTH, health_string, &dst_pos, ratio_x, ratio_y);
 
         if (row_num >= 0 && row_num < Constants::NUM_BATTLE_ROWS) {
             SDL_SetRenderDrawColor(renderer, 128, 128, 128 ,64);
@@ -338,7 +347,7 @@ int main(int argc, char *argv[]) {
         }
         float x = static_cast<float>(events.get_cursor_pos()->x);
         float y = static_cast<float>(events.get_cursor_pos()->y);
-        dst_pos = {.x = (x + 20) * ratio_x, .y = (y + 20) * ratio_y, .w = 0, .h = 64 * ratio_y};
+        dst_pos = {.x = x + 20, .y = y + 20 , .w = 0, .h = 64};
         Constants::Anim cursor_anim = static_cast<Constants::Anim>(player.get_selected_entity_type() * Constants::NUM_STATE_PER_ENTITY + 3);
         dst_pos.w = dst_pos.h * dynamic_cast<AnimationEntity*>(Constants::get_animation(cursor_anim).get())->get_ratio();
         RenderUtils::render_animation_entity(renderer, cursor_anim, &dst_pos);
