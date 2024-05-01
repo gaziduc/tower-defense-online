@@ -102,4 +102,18 @@ void Events::update_events(SDL_Window *window) {
                 break;
         }
     }
+
+    if (is_key_down(SDL_SCANCODE_F11)) {
+        press_up_key(SDL_SCANCODE_F11);
+
+        Uint32 flags = SDL_GetWindowFlags(window);
+        if ((flags & SDL_WINDOW_FULLSCREEN_DESKTOP) == SDL_WINDOW_FULLSCREEN_DESKTOP) {
+            SDL_SetWindowFullscreen(window, 0);
+        } else {
+            SDL_DisplayMode mode;
+            SDL_GetDisplayMode(0, 0, &mode);
+            SDL_SetWindowSize(window, mode.w, mode.h);
+            SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+        }
+    }
 }

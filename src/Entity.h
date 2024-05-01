@@ -55,6 +55,7 @@ public:
     int get_cost();
     bool can_attack_entity(std::optional<Entity>& enemy_entity_first);
     bool can_attack_player(std::optional<Entity>& enemy_entity_first);
+    bool is_beyond_entity(Entity& first_entity);
 
     // Rendering
     void render_health_bar(SDL_Renderer *renderer, float ratio_x, float ratio_y);

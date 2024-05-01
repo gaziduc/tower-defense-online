@@ -27,7 +27,7 @@ Entity::Entity(EntityType type, EntityDirection direction, unsigned row_num) {
     SDL_QueryTexture(get_entity_texture(), nullptr, nullptr, &w, &h);
     float height_ratio = static_cast<float>(h) / Constants::ENTITY_HEIGHT;
     float final_width = static_cast<float>(w) / height_ratio;
-    _dst_pos.x = direction == EntityDirection::LEFT_TO_RIGHT ? -final_width : 1920;
+    _dst_pos.x = direction == EntityDirection::LEFT_TO_RIGHT ? -final_width : Constants::VIEWPORT_WIDTH;
     _dst_pos.y = static_cast<float>(row_num + 0.5) * Constants::ROW_HEIGHT - Constants::ENTITY_HEIGHT / 2;
     _dst_pos.w = final_width;
     _dst_pos.h = Constants::ENTITY_HEIGHT;
@@ -175,6 +175,15 @@ bool Entity::can_attack_player(std::optional<Entity>& enemy_entity_first) {
         return !enemy_entity_first && get_entity_dst_pos()->x + get_entity_dst_pos()->w + get_range() >= 1920;
     } else if (_entity_direction == RIGHT_TO_LEFT) {
         return !enemy_entity_first && get_entity_dst_pos()->x - get_range() <= 0;
+    }
+}
+
+
+bool Entity::is_beyond_entity(Entity& first_entity) {
+    if (_entity_direction == LEFT_TO_RIGHT) {
+        return get_entity_dst_pos()->x > first_entity.get_entity_dst_pos()->x;
+    } else if (_entity_direction == RIGHT_TO_LEFT) {
+        return get_entity_dst_pos()->x < first_entity.get_entity_dst_pos()->x;
     }
 }
 

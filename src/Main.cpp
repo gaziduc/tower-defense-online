@@ -134,7 +134,7 @@ int main(int argc, char *argv[]) {
         SDL_FRect dst_pos = {.x = Constants::SDL_POS_X_CENTERED, .y = 450, .w = 0, .h = 0};
         RenderUtils::render_text_shaded(window, renderer, enter_ip, &dst_pos, {.r = 255, .g = 255, .b = 255, .a = SDL_ALPHA_OPAQUE},  {.r = 0, .g = 0, .b = 0, .a = SDL_ALPHA_OPAQUE}, ratio_x, ratio_y);
         dst_pos = {.x = Constants::SDL_POS_X_CENTERED, .y = 550, .w = 0, .h = 0};
-        RenderUtils::render_text_shaded(window, renderer, input, &dst_pos, {.r = 255, .g = 255, .b = 255, .a = SDL_ALPHA_OPAQUE},  {.r = 0, .g = 0, .b = 0, .a = SDL_ALPHA_OPAQUE}, ratio_x, ratio_y);
+        RenderUtils::render_text_shaded_prompt(window, renderer, input, &dst_pos, {.r = 255, .g = 255, .b = 255, .a = SDL_ALPHA_OPAQUE},  {.r = 0, .g = 0, .b = 0, .a = SDL_ALPHA_OPAQUE}, ratio_x, ratio_y);
         SDL_RenderPresent(renderer);
 
         SDL_framerateDelay(&fps_manager);
@@ -151,7 +151,6 @@ int main(int argc, char *argv[]) {
         if (events.is_quit()) {
             exit(0);
         }
-
 
         handle_server_actions(window, socket_set, socket, player, enemy_player);
         if (player.get_direction() != Entity::UNDEFINED && enemy_player.get_direction() != Entity::UNDEFINED) {
@@ -228,7 +227,7 @@ int main(int argc, char *argv[]) {
                 player_entity_first_index = 0;
                 for (int i = 1; i < player_entity_list.size(); i++) {
                     Entity current_entity = player_entity_list[i];
-                    if (current_entity.get_entity_dst_pos()->x > player_entity_first->get_entity_dst_pos()->x) {
+                    if (current_entity.is_beyond_entity(*player_entity_first)) {
                         player_entity_first = current_entity;
                         player_entity_first_index = i;
                     }
@@ -242,7 +241,7 @@ int main(int argc, char *argv[]) {
                 enemy_entity_first_index = 0;
                 for (int i = 1; i < enemy_entity_list.size(); i++) {
                     Entity current_entity = enemy_entity_list[i];
-                    if (current_entity.get_entity_dst_pos()->x < enemy_entity_first->get_entity_dst_pos()->x) {
+                    if (current_entity.is_beyond_entity(*enemy_entity_first)) {
                         enemy_entity_first = current_entity;
                         enemy_entity_first_index = i;
                     }
