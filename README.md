@@ -40,3 +40,7 @@ libwebpdemux-2.dll
 ```
 
 into the cmake-build-debug/ or cmake-build-release/ folder.
+
+## Release binaries
+
+Don't forget to add the .dll files that are in the mingw folder, e.g.: C:\Program Files\JetBrains\CLion 2024.1\bin\mingw\bin, to there release folder.
