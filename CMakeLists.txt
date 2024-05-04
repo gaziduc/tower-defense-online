@@ -27,22 +27,43 @@ add_executable(${PROJECT_NAME}
         src/RenderUtils.cpp
         src/RenderUtils.h
         src/IPv4.cpp
-        src/IPv4.h)
+        src/IPv4.h
+        src/Colors.cpp
+        src/Colors.h
+        src/game/Game.cpp
+        src/game/Game.h
+)
 
 add_executable(${PROJECT_NAME}-server
         resources.rc
         src/server/Main.cpp
-        src/server/Colors.cpp
-        src/server/Colors.h
-        src/server/ServerConstants.h
-        src/IPv4.cpp
-        src/IPv4.h
-        src/server/ServerPlayer.cpp
-        src/server/ServerPlayer.h
-        src/server/ServerEntity.cpp
-        src/server/ServerEntity.h
+        src/ErrorUtils.cpp
+        src/ErrorUtils.h
+        src/Animation.cpp
+        src/Animation.h
         src/LogUtils.cpp
         src/LogUtils.h
+        src/Events.cpp
+        src/Events.h
+        src/Entity.cpp
+        src/Entity.h
+        src/Constants.cpp
+        src/Constants.h
+        src/framerate/SDL2_framerate.cpp
+        src/framerate/SDL2_framerate.h
+        src/AnimationEntity.cpp
+        src/AnimationEntity.h
+        src/Player.cpp
+        src/Player.h
+        src/RenderUtils.cpp
+        src/RenderUtils.h
+        src/IPv4.cpp
+        src/IPv4.h
+        src/Colors.cpp
+        src/Colors.h
+        src/game/Game.cpp
+        src/game/Game.h
+        src/server/ServerConstants.h
 )
 
 set(CMAKE_PREFIX_PATH
@@ -75,4 +96,11 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         SDL2_net::SDL2_net
         SDL2_ttf::SDL2_ttf
 )
-target_link_libraries(${PROJECT_NAME}-server PRIVATE SDL2::SDL2 SDL2_net::SDL2_net)
+
+target_link_libraries(${PROJECT_NAME}-server PRIVATE
+        SDL2::SDL2
+        SDL2_image::SDL2_image
+        SDL2_mixer::SDL2_mixer
+        SDL2_net::SDL2_net
+        SDL2_ttf::SDL2_ttf
+)

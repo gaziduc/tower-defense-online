@@ -36,12 +36,13 @@ public:
         NUM_DIRECTIONS
     };
 
-    Entity(EntityType type, EntityDirection direction, unsigned row_num);
+    Entity(EntityType type, EntityDirection direction, unsigned row_num, unsigned long entity_id);
     EntityType get_entity_type();
     int get_row_num();
     void set_entity_state(EntityState state);
     SDL_Texture* get_entity_texture();
     SDL_FRect* get_entity_dst_pos();
+    void set_pos_x(float pos_x);
     void move();
     void attack(Entity& enemy);
     void attack(Player& enemy);
@@ -52,10 +53,16 @@ public:
     void decrease_health(int health_to_decrease);
     int get_attack_damage();
     bool is_dead();
-    int get_cost();
+    static int get_cost(EntityType entity_type);
     bool can_attack_entity(std::optional<Entity>& enemy_entity_first);
     bool can_attack_player(std::optional<Entity>& enemy_entity_first);
     bool is_beyond_entity(Entity& first_entity);
+    int get_health();
+    int get_max_health();
+    unsigned long get_id();
+    void set_health(int health);
+    void set_max_health(int max_health);
+
 
     // Rendering
     void render_health_bar(SDL_Renderer *renderer, float ratio_x, float ratio_y);
@@ -70,6 +77,9 @@ private:
     unsigned _row_num;
     int _max_health;
     int _health;
+
+    unsigned long _id;
+    bool _is_server_side;
 
     void set_state(EntityState state);
 };

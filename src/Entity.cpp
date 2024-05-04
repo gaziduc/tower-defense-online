@@ -10,30 +10,29 @@
 #include "LogUtils.h"
 #include "Player.h"
 
-Entity::Entity(EntityType type, EntityDirection direction, unsigned row_num) {
-    unsigned first_anim_index = static_cast<unsigned>(type) * Constants::NUM_STATE_PER_ENTITY;
-    for (unsigned i = first_anim_index; i < first_anim_index + Constants::NUM_STATE_PER_ENTITY; i++) {
-        _animations.push_back(Constants::get_animation(static_cast<Constants::Anim>(i)));
-    }
-
+Entity::Entity(EntityType type, EntityDirection direction, unsigned row_num, unsigned long entity_id) {
+    _id = entity_id;
     _entity_type = type;
     _entity_direction = direction;
     _entity_state = EntityState::RUNNING;
     _animation_frame = 0;
     _row_num = row_num;
 
-    int w = 0;
-    int h = 0;
-    SDL_QueryTexture(get_entity_texture(), nullptr, nullptr, &w, &h);
-    float height_ratio = static_cast<float>(h) / Constants::ENTITY_HEIGHT;
-    float final_width = static_cast<float>(w) / height_ratio;
+    unsigned first_anim_index = static_cast<unsigned>(type) * Constants::NUM_STATE_PER_ENTITY;
+    SDL_Point size = Constants::get_animation_size(static_cast<Constants::Anim>(first_anim_index));
+    float height_ratio = static_cast<float>(size.x) / Constants::ENTITY_HEIGHT;
+    float final_width = static_cast<float>(size.y) / height_ratio;
     _dst_pos.x = direction == EntityDirection::LEFT_TO_RIGHT ? -final_width : Constants::VIEWPORT_WIDTH;
     _dst_pos.y = static_cast<float>(row_num + 0.5) * Constants::ROW_HEIGHT - Constants::ENTITY_HEIGHT / 2;
     _dst_pos.w = final_width;
     _dst_pos.h = Constants::ENTITY_HEIGHT;
-
-    _max_health = 100;
+    _max_health = get_max_health();
     _health = _max_health;
+
+
+    for (unsigned i = first_anim_index; i < first_anim_index + Constants::NUM_STATE_PER_ENTITY; i++) {
+        _animations.push_back(Constants::get_animation(static_cast<Constants::Anim>(i)));
+    }
 }
 
 Entity::EntityType Entity::get_entity_type() {
@@ -64,6 +63,10 @@ SDL_Texture* Entity::get_entity_texture() {
 
 SDL_FRect* Entity::get_entity_dst_pos() {
     return &_dst_pos;
+}
+
+void Entity::set_pos_x(float pos_x) {
+    _dst_pos.x = pos_x;
 }
 
 void Entity::move() {
@@ -150,14 +153,14 @@ bool Entity::is_dead() {
     return _health <= 0;
 }
 
-int Entity::get_cost() {
-    switch (_entity_type) {
+int Entity::get_cost(Entity::EntityType entity_type) {
+    switch (entity_type) {
         case SWORD_MAN:
             return 40;
         case GUN_MAN:
             return 30;
         default:
-            LogUtils::log_message(LogUtils::SEVERE, "Unknown entity type: " + _entity_type);
+            LogUtils::log_message(LogUtils::SEVERE, "Unknown entity type: " + entity_type);
             return 0;
     }
 }
@@ -167,6 +170,9 @@ bool Entity::can_attack_entity(std::optional<Entity>& enemy_entity_first) {
         return enemy_entity_first && get_entity_dst_pos()->x + get_entity_dst_pos()->w + get_range() >= enemy_entity_first->get_entity_dst_pos()->x;
     } else if (_entity_direction == RIGHT_TO_LEFT) {
         return enemy_entity_first && get_entity_dst_pos()->x - get_range() <= enemy_entity_first->get_entity_dst_pos()->x + enemy_entity_first->get_entity_dst_pos()->w;
+    } else {
+        LogUtils::log_message(LogUtils::SEVERE, "Entity with id " + std::to_string(_id) + " has an incorrect direction: " + std::to_string(_entity_direction));
+        return false;
     }
 }
 
@@ -175,6 +181,9 @@ bool Entity::can_attack_player(std::optional<Entity>& enemy_entity_first) {
         return !enemy_entity_first && get_entity_dst_pos()->x + get_entity_dst_pos()->w + get_range() >= 1920;
     } else if (_entity_direction == RIGHT_TO_LEFT) {
         return !enemy_entity_first && get_entity_dst_pos()->x - get_range() <= 0;
+    } else {
+        LogUtils::log_message(LogUtils::SEVERE, "Entity with id " + std::to_string(_id) + " has an incorrect direction: " + std::to_string(_entity_direction));
+        return false;
     }
 }
 
@@ -184,9 +193,32 @@ bool Entity::is_beyond_entity(Entity& first_entity) {
         return get_entity_dst_pos()->x > first_entity.get_entity_dst_pos()->x;
     } else if (_entity_direction == RIGHT_TO_LEFT) {
         return get_entity_dst_pos()->x < first_entity.get_entity_dst_pos()->x;
+    } else {
+        LogUtils::log_message(LogUtils::SEVERE, "Entity with id " + std::to_string(_id) + " has an incorrect direction: " + std::to_string(_entity_direction));
+        return false;
     }
 }
 
+int Entity::get_health() {
+    return _health;
+}
+
+void Entity::set_health(int health) {
+    _health = health;
+}
+
+int Entity::get_max_health() {
+    return 100;
+}
+
+void Entity::set_max_health(int max_health) {
+    _max_health = max_health;
+}
+
+
+unsigned long Entity::get_id() {
+    return  _id;
+}
 
 
 void Entity::render_health_bar(SDL_Renderer *renderer, float ratio_x, float ratio_y) {

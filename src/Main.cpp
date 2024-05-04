@@ -5,9 +5,13 @@
 #include <SDL_ttf.h>
 #include <SDL_mixer.h>
 #include <SDL_net.h>
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
 #include "Animation.h"
 #include "AnimationEntity.h"
+#include "Colors.h"
 #include "Constants.h"
 #include "Entity.h"
 #include "ErrorUtils.h"
@@ -15,12 +19,17 @@
 #include "Player.h"
 #include "RenderUtils.h"
 #include "framerate/SDL2_framerate.h"
+#include "game/Game.h"
 
-void send_new_entity_to_server(TCPsocket socket, Entity& entity);
+void send_new_entity_to_server(TCPsocket socket, Entity::EntityType type, Entity::EntityDirection direction, int row_num);
 void handle_server_actions(SDL_Window* window, SDLNet_SocketSet socket_set, TCPsocket socket, Player& player, Player& enemy_player);
 void pop_back_utf8(std::string& utf8_str);
 
 int main(int argc, char *argv[]) {
+    Colors::enable_colors_ifn();
+    #ifdef _WIN32
+        SetConsoleOutputCP(CP_UTF8);
+    #endif
     /* Init SDL2 and show window */
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) < 0) {
         ErrorUtils::display_last_sdl_error_and_quit(nullptr);
@@ -193,11 +202,10 @@ int main(int argc, char *argv[]) {
         if (events.is_mouse_button_down(SDL_BUTTON_LEFT)) {
             events.release_mouse_button(SDL_BUTTON_LEFT);
             if (row_num >= 0 && row_num < Constants::NUM_BATTLE_ROWS) {
-                Entity new_entity(player.get_selected_entity_type(), player.get_direction(), row_num);
-                int entity_cost = new_entity.get_cost();
+                int entity_cost = Entity::get_cost(player.get_selected_entity_type());
                 if (player.get_money() >= entity_cost) {
                     player.increase_money(-entity_cost);
-                    send_new_entity_to_server(socket, new_entity);
+                    send_new_entity_to_server(socket, player.get_selected_entity_type(), player.get_direction(), row_num);
                 }
             }
         }
@@ -215,86 +223,8 @@ int main(int argc, char *argv[]) {
             player.set_selected_entity_type(static_cast<Entity::EntityType>(new_selected_type));
         }
 
-        // Physics and game
-        for (int row_index = 0; row_index < Constants::NUM_BATTLE_ROWS; row_index++) {
-            std::vector<Entity> player_entity_list = player.get_entities_map()[row_index];
-            std::vector<Entity> enemy_entity_list = enemy_player.get_entities_map()[row_index];
-
-            std::optional<Entity> player_entity_first = std::nullopt;
-            int player_entity_first_index = -1;
-            if (!player_entity_list.empty()) {
-                player_entity_first = player_entity_list[0];
-                player_entity_first_index = 0;
-                for (int i = 1; i < player_entity_list.size(); i++) {
-                    Entity current_entity = player_entity_list[i];
-                    if (current_entity.is_beyond_entity(*player_entity_first)) {
-                        player_entity_first = current_entity;
-                        player_entity_first_index = i;
-                    }
-                }
-            }
-
-            std::optional<Entity> enemy_entity_first = std::nullopt;
-            int enemy_entity_first_index = -1;
-            if (!enemy_entity_list.empty()) {
-                enemy_entity_first = enemy_entity_list[0];
-                enemy_entity_first_index = 0;
-                for (int i = 1; i < enemy_entity_list.size(); i++) {
-                    Entity current_entity = enemy_entity_list[i];
-                    if (current_entity.is_beyond_entity(*enemy_entity_first)) {
-                        enemy_entity_first = current_entity;
-                        enemy_entity_first_index = i;
-                    }
-                }
-            }
-
-
-            for (Entity& player_entity : player_entity_list) {
-                if (player_entity.can_attack_entity(enemy_entity_first)) {
-                    player_entity.attack(enemy_entity_list[enemy_entity_first_index]);
-                } else if (player_entity.can_attack_player(enemy_entity_first)) {
-                    player_entity.attack(enemy_player);
-                } else {
-                    player_entity.move();
-                }
-            }
-
-
-            for (Entity& enemy_entity: enemy_entity_list) {
-                if (enemy_entity.can_attack_entity(player_entity_first)) {
-                    enemy_entity.attack(player_entity_list[player_entity_first_index]);
-                } else if (enemy_entity.can_attack_player(player_entity_first)) {
-                    enemy_entity.attack(player);
-                } else {
-                    enemy_entity.move();
-                }
-            }
-
-            std::vector<Entity>::iterator entity_ltr_it = player_entity_list.begin();
-            while (entity_ltr_it != player_entity_list.end()) {
-                if (entity_ltr_it->is_dead()) {
-                    entity_ltr_it = player_entity_list.erase(entity_ltr_it);
-                } else {
-                    entity_ltr_it++;
-                }
-            }
-
-            std::vector<Entity>::iterator entity_rtl_it = enemy_entity_list.begin();
-            while (entity_rtl_it != enemy_entity_list.end()) {
-                if (entity_rtl_it->is_dead()) {
-                    player.increase_money(entity_rtl_it->get_cost());
-                    entity_rtl_it = enemy_entity_list.erase(entity_rtl_it);
-                } else {
-                    entity_rtl_it++;
-                }
-            }
-
-
-            player.get_entities_map()[row_index] = player_entity_list;
-            enemy_player.get_entities_map()[row_index] = enemy_entity_list;
-        }
-
-
+        // Game (move players, attacks, etc...)
+        Game::process_game(player, enemy_player);
 
         // Rendering
         SDL_RenderClear(renderer);
@@ -359,6 +289,9 @@ int main(int argc, char *argv[]) {
 
     SDL_DestroyTexture(background);
 
+    SDL_DestroyRenderer(renderer);
+    SDL_DestroyWindow(window);
+
     SDLNet_TCP_DelSocket(socket_set, socket);
     SDLNet_TCP_Close(socket);
     SDLNet_Quit();
@@ -371,9 +304,55 @@ int main(int argc, char *argv[]) {
     return 0;
 }
 
-void send_new_entity_to_server(TCPsocket socket, Entity& entity) {
-    std::string message = Constants::MESSAGE_NEW_ENTITY + Constants::WORD_DELIMITER + std::to_string(entity.get_entity_type()) + Constants::WORD_DELIMITER + std::to_string(entity.get_entity_direction()) + Constants::WORD_DELIMITER + std::to_string(entity.get_row_num());
+void send_new_entity_to_server(TCPsocket socket, Entity::EntityType type, Entity::EntityDirection direction, int row_num) {
+    std::string message = Constants::MESSAGE_NEW_ENTITY + Constants::WORD_DELIMITER + std::to_string(type) + Constants::WORD_DELIMITER + std::to_string(direction) + Constants::WORD_DELIMITER + std::to_string(row_num);
     SDLNet_TCP_Send(socket, message.c_str(), message.size());
+}
+
+int handle_state_from_server(Player& player, Player& enemy_player, std::vector<std::vector<std::string>> splitted_messages, int splitted_message_index) {
+    splitted_message_index++;
+
+    while (splitted_message_index < splitted_messages.size()) {
+        std::vector<std::string> splitted_message = splitted_messages[splitted_message_index];
+
+        if (splitted_message[0] == Constants::MESSAGE_STATE_END) {
+            return splitted_message_index;
+        }
+
+        if (splitted_message[0] == Constants::MESSAGE_ENTITY) {
+            unsigned long entity_id = std::stoul(splitted_message[1]);
+            Entity::EntityType entity_type = static_cast<Entity::EntityType>(std::stoi(splitted_message[2]));
+            Entity::EntityDirection entity_direction = static_cast<Entity::EntityDirection>(std::stoi(splitted_message[3]));
+            int row_num = std::stoi(splitted_message[4]);
+            float pos_x = std::stof(splitted_message[5]);
+            int max_health = std::stoi(splitted_message[6]);
+            int health = std::stoi(splitted_message[7]);
+
+            if (player.get_direction() == entity_direction) {
+                std::vector<Entity>& entities_map = player.get_entities_map()[row_num];
+                for (Entity& entity : entities_map) {
+                    if (entity.get_id() == entity_id) {
+                        entity.set_max_health(max_health);
+                        entity.set_health(health);
+                        entity.set_pos_x(pos_x);
+                    }
+                }
+            } else {
+                std::vector<Entity>& entities_map = enemy_player.get_entities_map()[row_num];
+                for (Entity& entity : entities_map) {
+                    if (entity.get_id() == entity_id) {
+                        entity.set_max_health(max_health);
+                        entity.set_health(health);
+                        entity.set_pos_x(pos_x);
+                    }
+                }
+            }
+        }
+
+        splitted_message_index++;
+    }
+
+    return splitted_message_index;
 }
 
 
@@ -415,13 +394,18 @@ void handle_server_actions(SDL_Window* window, SDLNet_SocketSet socket_set, TCPs
             splitted_messages_words.push_back(splitted_words);
         }
 
-        for (std::vector<std::string> splitted_message : splitted_messages_words) {
-            if (splitted_message[0] == Constants::MESSAGE_NEW_ENTITY) {
+        for (int i = 0; i < splitted_messages_words.size(); i++) {
+            std::vector<std::string> splitted_message = splitted_messages_words[i];
+
+            if (splitted_message[0] == Constants::MESSAGE_STATE_BEGIN) {
+                i = handle_state_from_server(player, enemy_player, splitted_messages_words, i);
+            } else if (splitted_message[0] == Constants::MESSAGE_NEW_ENTITY) {
                 Entity::EntityType entity_type = static_cast<Entity::EntityType>(std::stoi(splitted_message[1]));
                 Entity::EntityDirection entity_direction = static_cast<Entity::EntityDirection>(std::stoi(splitted_message[2]));
                 int row_num = std::stoi(splitted_message[3]);
+                unsigned long id = std::stoul(splitted_message[4]);
 
-                Entity new_entity(entity_type, entity_direction, row_num);
+                Entity new_entity(entity_type, entity_direction, row_num, id);
                 if (entity_direction == player.get_direction()) {
                     player.get_entities_map()[row_num].push_back(new_entity);
                 } else {

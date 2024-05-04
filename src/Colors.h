@@ -13,6 +13,7 @@ public:
     static std::string yellow();
     static std::string green();
     static std::string cyan();
+    static std::string red();
     static std::string reset();
 };
 

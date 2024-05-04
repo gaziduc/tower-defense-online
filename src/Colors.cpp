@@ -34,6 +34,10 @@ std::string Colors::cyan() {
     return "\x1B[96m";
 }
 
+std::string Colors::red() {
+    return "\x1B[31m";
+}
+
 std::string Colors::reset() {
-    return "\033[0m";
+    return "\x1B[0m";
 }

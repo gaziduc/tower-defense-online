@@ -34,7 +34,7 @@ void ErrorUtils::display_last_ttf_error_and_quit(SDL_Window *window, const std::
 }
 
 void ErrorUtils::display_error_and_quit(SDL_Window *window, const std::string &error, const std::source_location& location) {
-    LogUtils::log_message(LogUtils::SEVERE, error, location);
+    LogUtils::log_message(LogUtils::CRITICAL, error, location);
     SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, Constants::PROJECT_ERROR_TITLE.c_str(), error.c_str(), window);
     exit(1);
 }

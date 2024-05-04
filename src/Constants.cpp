@@ -13,26 +13,27 @@
 
 std::vector<std::shared_ptr<Animation>> Constants::_anims;
 std::vector<TTF_Font*> Constants::_fonts;
+std::vector<SDL_Point> Constants::_anim_sizes;
 
 void Constants::load_animations(SDL_Window *window, SDL_Renderer *renderer) {
     // Sword
-    Animation sword_man_run(window, renderer, "resources/images/sword_man/run", 10, 3);
+    Animation sword_man_run(window, renderer, SWORD_MAN_RES + "/run", 10, 3);
     _anims.push_back(std::make_shared<Animation>(sword_man_run));
-    Animation sword_man_slash(window, renderer, "resources/images/sword_man/slash", 10, 3);
+    Animation sword_man_slash(window, renderer, SWORD_MAN_RES + "/slash", 10, 3);
     _anims.push_back(std::make_shared<Animation>(sword_man_slash));
-    Animation sword_man_hurt(window, renderer, "resources/images/sword_man/hurt", 10, 3);
+    Animation sword_man_hurt(window, renderer, SWORD_MAN_RES + "/hurt", 10, 3);
     _anims.push_back(std::make_shared<Animation>(sword_man_hurt));
-    AnimationEntity sword_man_idle(window, renderer, "resources/images/sword_man/idle", 10, 3);
+    AnimationEntity sword_man_idle(window, renderer, SWORD_MAN_RES + "/idle", 10, 3);
     _anims.push_back(std::make_shared<AnimationEntity>(sword_man_idle));
 
     // Gun
-    Animation gun_man_run(window, renderer, "resources/images/gun_man/run", 10, 3);
+    Animation gun_man_run(window, renderer, GUN_MAN_RES + "/run", 10, 3);
     _anims.push_back(std::make_shared<Animation>(gun_man_run));
-    Animation gun_man_shot(window, renderer, "resources/images/gun_man/shot", 10, 3);
+    Animation gun_man_shot(window, renderer, GUN_MAN_RES + "/shot", 10, 3);
     _anims.push_back(std::make_shared<Animation>(gun_man_shot));
-    Animation gun_man_hurt(window, renderer, "resources/images/gun_man/hurt", 10, 3);
+    Animation gun_man_hurt(window, renderer, GUN_MAN_RES + "/hurt", 10, 3);
     _anims.push_back(std::make_shared<Animation>(gun_man_hurt));
-    AnimationEntity gun_man_idle(window, renderer, "resources/images/gun_man/idle", 10, 3);
+    AnimationEntity gun_man_idle(window, renderer, GUN_MAN_RES + "/idle", 10, 3);
     _anims.push_back(std::make_shared<AnimationEntity>(gun_man_idle));
 
     // Coin
@@ -41,6 +42,21 @@ void Constants::load_animations(SDL_Window *window, SDL_Renderer *renderer) {
 
     AnimationEntity health(window, renderer, "resources/images/health.webp");
     _anims.push_back(std::make_shared<AnimationEntity>(health));
+
+    load_animations_sizes();
+}
+
+void Constants::load_animations_sizes() {
+    for (std::shared_ptr<Animation>& animation : _anims) {
+        int w = 0;
+        int h = 0;
+        SDL_QueryTexture(animation->get_texture(0), nullptr, nullptr, &w, &h);
+        _anim_sizes.push_back({.x = w, .y = h});
+    }
+}
+
+SDL_Point Constants::get_animation_size(Anim anim) {
+    return _anim_sizes[anim];
 }
 
 void Constants::load_fonts(SDL_Window *window) {

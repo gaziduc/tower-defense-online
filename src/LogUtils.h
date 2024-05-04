@@ -11,10 +11,11 @@
 class LogUtils {
 public:
     enum Level {
-        DEBUG,
+        DEBUG = 0,
         INFO,
         WARN,
-        SEVERE
+        SEVERE,
+        CRITICAL
     };
 
     static std::string get_level_string(Level level);
