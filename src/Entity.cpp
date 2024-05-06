@@ -10,7 +10,7 @@
 #include "LogUtils.h"
 #include "Player.h"
 
-Entity::Entity(EntityType type, EntityDirection direction, unsigned row_num, unsigned long entity_id) {
+Entity::Entity(EntityType type, EntityDirection direction, unsigned row_num, Uint32 entity_id) {
     _id = entity_id;
     _entity_type = type;
     _entity_direction = direction;
@@ -69,15 +69,17 @@ void Entity::set_pos_x(float pos_x) {
     _dst_pos.x = pos_x;
 }
 
-void Entity::move() {
+void Entity::move(int num_times) {
     if (_entity_state != EntityState::RUNNING) {
         set_entity_state(EntityState::RUNNING);
     } else {
-        _animation_frame++;
-        reset_animation_ifn();
+        for (int i = 0; i < num_times; i++) {
+            _animation_frame++;
+            reset_animation_ifn();
+        }
     }
 
-    _dst_pos.x += _entity_direction == EntityDirection::LEFT_TO_RIGHT ? 1.5 : -1.5;
+    _dst_pos.x += _entity_direction == EntityDirection::LEFT_TO_RIGHT ? 1.5 * static_cast<float>(num_times) : -1.5 * static_cast<float>(num_times);
 }
 
 void Entity::set_state(EntityState state) {

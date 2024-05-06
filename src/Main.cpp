@@ -20,9 +20,12 @@
 #include "RenderUtils.h"
 #include "framerate/SDL2_framerate.h"
 #include "game/Game.h"
+#include "network/NetworkUtils.h"
+#include "server/ServerConstants.h"
 
 void send_new_entity_to_server(TCPsocket socket, Entity::EntityType type, Entity::EntityDirection direction, int row_num);
-void handle_server_actions(SDL_Window* window, SDLNet_SocketSet socket_set, TCPsocket socket, Player& player, Player& enemy_player);
+void send_time_message_to_server(TCPsocket socket, Uint32 time);
+Uint32 handle_server_actions(SDL_Window* window, SDLNet_SocketSet socket_set, TCPsocket socket, Player& player, Player& enemy_player, int latency);
 void pop_back_utf8(std::string& utf8_str);
 
 int main(int argc, char *argv[]) {
@@ -35,12 +38,14 @@ int main(int argc, char *argv[]) {
         ErrorUtils::display_last_sdl_error_and_quit(nullptr);
     }
 
+    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "best");
+
     SDL_Window *window = SDL_CreateWindow(Constants::PROJECT_NAME.c_str(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1600, 900, SDL_WINDOW_RESIZABLE);
     if (window == nullptr) {
         ErrorUtils::display_last_sdl_error_and_quit(nullptr);
     }
 
-    SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+    SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
     if (renderer == nullptr) {
         ErrorUtils::display_last_sdl_error_and_quit(window);
     }
@@ -154,6 +159,18 @@ int main(int argc, char *argv[]) {
     Player player(Constants::INITIAL_PLAYER_HEALTH, Constants::INITIAL_PLAYER_MONEY);
     Player enemy_player(Constants::INITIAL_PLAYER_HEALTH, Constants::INITIAL_PLAYER_MONEY);
 
+    Uint32 send_ticks = SDL_GetTicks();
+    send_time_message_to_server(socket, send_ticks);
+
+    Uint32 recv_server_ticks = 0;
+    while (recv_server_ticks == 0) {
+        recv_server_ticks = handle_server_actions(window, socket_set, socket, player, enemy_player, 0);
+    }
+
+    Uint32 recv_ticks = SDL_GetTicks();
+    Uint32 latency = (recv_ticks - send_ticks) / 2;
+
+
     bool game_started = false;
     while (!game_started) {
         events.update_events(window);
@@ -161,7 +178,7 @@ int main(int argc, char *argv[]) {
             exit(0);
         }
 
-        handle_server_actions(window, socket_set, socket, player, enemy_player);
+        handle_server_actions(window, socket_set, socket, player, enemy_player, latency);
         if (player.get_direction() != Entity::UNDEFINED && enemy_player.get_direction() != Entity::UNDEFINED) {
             game_started = true;
         }
@@ -191,7 +208,7 @@ int main(int argc, char *argv[]) {
             break;
         }
 
-        handle_server_actions(window, socket_set, socket, player, enemy_player);
+        handle_server_actions(window, socket_set, socket, player, enemy_player, latency);
 
         SDL_Point window_size;
         SDL_GetWindowSize(window, &window_size.x, &window_size.y);
@@ -287,6 +304,30 @@ int main(int argc, char *argv[]) {
         SDL_framerateDelay(&fps_manager);
     }
 
+    while (true) {
+        events.update_events(window);
+        if (events.is_quit()) {
+            exit(0);
+        }
+
+        SDL_Point window_size;
+        SDL_GetWindowSize(window, &window_size.x, &window_size.y);
+        float ratio_x = static_cast<float>(window_size.x) / Constants::VIEWPORT_WIDTH;
+        float ratio_y = static_cast<float>(window_size.y) / Constants::VIEWPORT_HEIGHT;
+
+
+        SDL_RenderClear(renderer);
+
+        SDL_FRect dst_pos = {.x = Constants::SDL_POS_X_CENTERED, .y = 450, .w = 0, .h = 0};
+        std::string end_str(player.get_health() <= 0 ? "You lost!" : "You won!");
+        RenderUtils::render_text_shaded(window, renderer, end_str, &dst_pos, {.r = 255, .g = 255, .b = 255, .a = SDL_ALPHA_OPAQUE}, {.r = 0, .g = 0, .b = 0, .a = SDL_ALPHA_OPAQUE}, ratio_x, ratio_y);
+
+        SDL_RenderPresent(renderer);
+
+        // FPS
+        SDL_framerateDelay(&fps_manager);
+    }
+
     SDL_DestroyTexture(background);
 
     SDL_DestroyRenderer(renderer);
@@ -305,58 +346,24 @@ int main(int argc, char *argv[]) {
 }
 
 void send_new_entity_to_server(TCPsocket socket, Entity::EntityType type, Entity::EntityDirection direction, int row_num) {
-    std::string message = Constants::MESSAGE_NEW_ENTITY + Constants::WORD_DELIMITER + std::to_string(type) + Constants::WORD_DELIMITER + std::to_string(direction) + Constants::WORD_DELIMITER + std::to_string(row_num);
-    SDLNet_TCP_Send(socket, message.c_str(), message.size());
-}
-
-int handle_state_from_server(Player& player, Player& enemy_player, std::vector<std::vector<std::string>> splitted_messages, int splitted_message_index) {
-    splitted_message_index++;
-
-    while (splitted_message_index < splitted_messages.size()) {
-        std::vector<std::string> splitted_message = splitted_messages[splitted_message_index];
-
-        if (splitted_message[0] == Constants::MESSAGE_STATE_END) {
-            return splitted_message_index;
-        }
-
-        if (splitted_message[0] == Constants::MESSAGE_ENTITY) {
-            unsigned long entity_id = std::stoul(splitted_message[1]);
-            Entity::EntityType entity_type = static_cast<Entity::EntityType>(std::stoi(splitted_message[2]));
-            Entity::EntityDirection entity_direction = static_cast<Entity::EntityDirection>(std::stoi(splitted_message[3]));
-            int row_num = std::stoi(splitted_message[4]);
-            float pos_x = std::stof(splitted_message[5]);
-            int max_health = std::stoi(splitted_message[6]);
-            int health = std::stoi(splitted_message[7]);
-
-            if (player.get_direction() == entity_direction) {
-                std::vector<Entity>& entities_map = player.get_entities_map()[row_num];
-                for (Entity& entity : entities_map) {
-                    if (entity.get_id() == entity_id) {
-                        entity.set_max_health(max_health);
-                        entity.set_health(health);
-                        entity.set_pos_x(pos_x);
-                    }
-                }
-            } else {
-                std::vector<Entity>& entities_map = enemy_player.get_entities_map()[row_num];
-                for (Entity& entity : entities_map) {
-                    if (entity.get_id() == entity_id) {
-                        entity.set_max_health(max_health);
-                        entity.set_health(health);
-                        entity.set_pos_x(pos_x);
-                    }
-                }
-            }
-        }
-
-        splitted_message_index++;
-    }
-
-    return splitted_message_index;
+    char message[4] = { 0 };
+    message[0] = Constants::MESSAGE_NEW_ENTITY;
+    message[1] = type;
+    message[2] = direction;
+    message[3] = row_num;
+    SDLNet_TCP_Send(socket, message, 4);
 }
 
 
-void handle_server_actions(SDL_Window* window, SDLNet_SocketSet socket_set, TCPsocket socket, Player& player, Player& enemy_player) {
+void send_time_message_to_server(TCPsocket socket, Uint32 time) {
+    char message[5] = { 0 };
+    message[0] = Constants::MESSAGE_TIME;
+    SDLNet_Write32(time, message + 1);
+    SDLNet_TCP_Send(socket, message, 5);
+}
+
+
+Uint32 handle_server_actions(SDL_Window* window, SDLNet_SocketSet socket_set, TCPsocket socket, Player& player, Player& enemy_player, int latency_frames) {
     int sockets_ready_for_reading = SDLNet_CheckSockets(socket_set, 0);
     if (sockets_ready_for_reading == -1) {
         ErrorUtils::display_last_net_error_and_quit(window);
@@ -366,53 +373,81 @@ void handle_server_actions(SDL_Window* window, SDLNet_SocketSet socket_set, TCPs
         std::vector<std::string> splitted_messages;
 
         // Read from server
-        char data[Constants::MAX_MESSAGE_SIZE] = { 0 };
-        SDLNet_TCP_Recv(socket, data, Constants::MAX_MESSAGE_SIZE);
-        std::string received_message(data);
+        char data[ServerConstants::MAX_MESSAGE_SIZE] = { 0 };
+        int received_bytes = SDLNet_TCP_Recv(socket, data, ServerConstants::MAX_MESSAGE_SIZE);
 
-        size_t start;
-        size_t end = 0;
+        int byte_index = 0;
 
-        // Split by message
-        while ((start = received_message.find_first_not_of(Constants::MESSAGE_DELIMITER, end)) != std::string::npos) {
-            end = received_message.find(Constants::MESSAGE_DELIMITER, start);
-            splitted_messages.push_back(received_message.substr(start, end - start));
-        }
+        Uint32 server_time = 0;
+        while (byte_index < received_bytes) {
+            if (data[byte_index] == Constants::MESSAGE_TIME) {
+                server_time = SDLNet_Read32(data + byte_index + 1);
+                byte_index += 5;
+            } else if (data[byte_index] == Constants::MESSAGE_NEW_ENTITY) {
+                // read
+                Entity::EntityType type = static_cast<Entity::EntityType>(data[byte_index + 1]);
+                Entity::EntityDirection direction = static_cast<Entity::EntityDirection>(data[byte_index + 2]);
+                int row_num = data[byte_index + 3];
+                Uint32 id = SDLNet_Read32(data + byte_index + 4);
 
-        // Split by word
-        std::vector<std::vector<std::string>> splitted_messages_words;
-        for (std::string& message : splitted_messages) {
-            std::vector<std::string> splitted_words;
+                // add
+                Entity new_entity(type, direction, row_num, id);
 
-            end = 0;
-            while ((start = message.find_first_not_of(Constants::WORD_DELIMITER, end)) != std::string::npos)
-            {
-                end = message.find(Constants::WORD_DELIMITER, start);
-                splitted_words.push_back(message.substr(start, end - start));
-            }
+                // Handle latency
+                if (latency_frames > 0) {
+                    new_entity.move(latency_frames);
+                }
 
-            splitted_messages_words.push_back(splitted_words);
-        }
-
-        for (int i = 0; i < splitted_messages_words.size(); i++) {
-            std::vector<std::string> splitted_message = splitted_messages_words[i];
-
-            if (splitted_message[0] == Constants::MESSAGE_STATE_BEGIN) {
-                i = handle_state_from_server(player, enemy_player, splitted_messages_words, i);
-            } else if (splitted_message[0] == Constants::MESSAGE_NEW_ENTITY) {
-                Entity::EntityType entity_type = static_cast<Entity::EntityType>(std::stoi(splitted_message[1]));
-                Entity::EntityDirection entity_direction = static_cast<Entity::EntityDirection>(std::stoi(splitted_message[2]));
-                int row_num = std::stoi(splitted_message[3]);
-                unsigned long id = std::stoul(splitted_message[4]);
-
-                Entity new_entity(entity_type, entity_direction, row_num, id);
-                if (entity_direction == player.get_direction()) {
+                if (direction == player.get_direction()) {
                     player.get_entities_map()[row_num].push_back(new_entity);
                 } else {
                     enemy_player.get_entities_map()[row_num].push_back(new_entity);
                 }
-            } else if (splitted_message[0] == Constants::MESSAGE_START) {
-                Entity::EntityDirection player_direction = static_cast<Entity::EntityDirection>(std::stoi(splitted_message[1]));
+
+                byte_index += 8;
+            } else if (data[byte_index] == Constants::MESSAGE_STATE_BEGIN) {
+                byte_index++;
+
+                int num_entities = SDLNet_Read16(data + byte_index);
+                byte_index += 2;
+
+                for (int i = 0; i < num_entities; i++) {
+                    Entity::EntityType type = static_cast<Entity::EntityType>(data[1]);
+                    Entity::EntityDirection direction = static_cast<Entity::EntityDirection>(data[2]);
+                    int row_num = data[3];
+                    Uint32 id = SDLNet_Read32(data + 4);
+                    float pos_x = NetworkUtils::read_float(data + 8);
+                    int max_health = SDLNet_Read32(data + 12);
+                    int health = SDLNet_Read32(data + 16);
+
+                    if (player.get_direction() == direction) {
+                        std::vector<Entity>& entities_map = player.get_entities_map()[row_num];
+                        for (Entity& entity : entities_map) {
+                            if (entity.get_id() == id) {
+                                entity.set_max_health(max_health);
+                                entity.set_health(health);
+                                entity.set_pos_x(pos_x);
+                                entity.move(latency_frames);
+                            }
+                        }
+                    } else {
+                        std::vector<Entity>& entities_map = enemy_player.get_entities_map()[row_num];
+                        for (Entity& entity : entities_map) {
+                            if (entity.get_id() == id) {
+                                entity.set_max_health(max_health);
+                                entity.set_health(health);
+                                entity.set_pos_x(pos_x);
+                                entity.move(latency_frames);
+                            }
+                        }
+                    }
+
+                    byte_index += 20;
+                }
+
+                byte_index++;
+            } else if (data[byte_index] == Constants::MESSAGE_START) {
+                Entity::EntityDirection player_direction = static_cast<Entity::EntityDirection>(data[byte_index + 1]);
                 if (player_direction == Entity::LEFT_TO_RIGHT) {
                     player.set_direction(Entity::LEFT_TO_RIGHT);
                     enemy_player.set_direction(Entity::RIGHT_TO_LEFT);
@@ -420,9 +455,15 @@ void handle_server_actions(SDL_Window* window, SDLNet_SocketSet socket_set, TCPs
                     player.set_direction(Entity::RIGHT_TO_LEFT);
                     enemy_player.set_direction(Entity::LEFT_TO_RIGHT);
                 }
+
+                byte_index += 2;
             }
         }
+
+        return server_time;
     }
+
+    return 0;
 }
 
 void pop_back_utf8(std::string& utf8_str) {

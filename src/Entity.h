@@ -36,14 +36,14 @@ public:
         NUM_DIRECTIONS
     };
 
-    Entity(EntityType type, EntityDirection direction, unsigned row_num, unsigned long entity_id);
+    Entity(EntityType type, EntityDirection direction, unsigned row_num, Uint32 entity_id);
     EntityType get_entity_type();
     int get_row_num();
     void set_entity_state(EntityState state);
     SDL_Texture* get_entity_texture();
     SDL_FRect* get_entity_dst_pos();
     void set_pos_x(float pos_x);
-    void move();
+    void move(int num_times = 1);
     void attack(Entity& enemy);
     void attack(Player& enemy);
     void reset_animation_ifn();

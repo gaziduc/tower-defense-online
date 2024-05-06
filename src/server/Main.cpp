@@ -19,9 +19,10 @@
 #include "ServerConstants.h"
 #include "../framerate/SDL2_framerate.h"
 #include "../game/Game.h"
+#include "../network/NetworkUtils.h"
 
 int get_port_from_string(const std::string& port_string);
-void send_to_clients(const std::vector<std::pair<TCPsocket, Player>>& client_list, std::string& message);
+void send_to_clients(const std::vector<std::pair<TCPsocket, Player>>& client_list, char* message, int message_len);
 
 int main(int argc, char *argv[]) {
     Colors::enable_colors_ifn();
@@ -123,10 +124,15 @@ int main(int argc, char *argv[]) {
             SDLNet_TCP_AddSocket(socket_set, potential_new_client_socket);
 
             if (client_list.size() == 2) {
-                std::string client_0_str = Constants::MESSAGE_START + Constants::WORD_DELIMITER + std::to_string(Entity::EntityDirection::LEFT_TO_RIGHT);
-                SDLNet_TCP_Send(client_list[0].first, client_0_str.c_str(), client_0_str.size());
-                std::string client_1_str = Constants::MESSAGE_START + Constants::WORD_DELIMITER + std::to_string(Entity::EntityDirection::RIGHT_TO_LEFT);
-                SDLNet_TCP_Send(client_list[1].first, client_1_str.c_str(), client_1_str.size());
+                char message_client_0[2] = { 0 };
+                message_client_0[0] = Constants::MESSAGE_START;
+                message_client_0[1] = Entity::EntityDirection::LEFT_TO_RIGHT;
+                SDLNet_TCP_Send(client_list[0].first, message_client_0, 2);
+
+                char message_client_1[2] = { 0 };
+                message_client_1[0] = Constants::MESSAGE_START;
+                message_client_1[1] = Entity::EntityDirection::RIGHT_TO_LEFT;
+                SDLNet_TCP_Send(client_list[1].first, message_client_1, 2);
             }
         }
 
@@ -142,15 +148,19 @@ int main(int argc, char *argv[]) {
             }
 
             if (sockets_ready_for_reading > 0) {
+                int byte_index = 0;
+                char message[ServerConstants::MAX_MESSAGE_SIZE] = { 0 };
+
                 std::vector<std::pair<TCPsocket, Player>>::iterator socket_iter = client_list.begin();
                 while (socket_iter != client_list.end()) {
                     TCPsocket curr_socket = socket_iter->first;
 
                     if (SDLNet_SocketReady(curr_socket) > 0) {
-                        char data[Constants::MAX_MESSAGE_SIZE] = { 0 };
+                        char data[ServerConstants::MAX_MESSAGE_SIZE] = { 0 };
 
                         // If client disconnected
-                        if (SDLNet_TCP_Recv(curr_socket, data, Constants::MAX_MESSAGE_SIZE) <= 0) {
+                        int bytes_read = SDLNet_TCP_Recv(curr_socket, data, ServerConstants::MAX_MESSAGE_SIZE);
+                        if (bytes_read <= 0) {
                             IPaddress* new_client_ip_address = SDLNet_TCP_GetPeerAddress(curr_socket);
                             IPv4 curr_ipv4(new_client_ip_address);
                             std::cout << "User at " << Colors::yellow() << curr_ipv4.to_string() << Colors::reset() << ':' << Colors::green() << new_client_ip_address->port << Colors::reset() << " (" << SDLNet_ResolveIP(new_client_ip_address) << ") disconnected." << std::endl;
@@ -163,72 +173,84 @@ int main(int argc, char *argv[]) {
                             continue;
                         }
 
-                        std::string received_message(data);
-                        LogUtils::log_message(LogUtils::DEBUG, received_message);
 
-                        std::vector<std::string> splitted_messages;
-                        size_t start;
-                        size_t end = 0;
-                        while ((start = received_message.find_first_not_of(Constants::MESSAGE_DELIMITER, end)) != std::string::npos) {
-                            end = received_message.find(Constants::MESSAGE_DELIMITER, start);
-                            splitted_messages.push_back(received_message.substr(start, end - start));
-                        }
-
-                        std::vector<std::vector<std::string>> splitted_messages_words;
-                        for (auto& message : splitted_messages) {
-                            std::vector<std::string> splitted_words;
-                            end = 0;
-                            while ((start = message.find_first_not_of(Constants::WORD_DELIMITER, end)) != std::string::npos) {
-                                end = message.find(Constants::WORD_DELIMITER, start);
-                                splitted_words.push_back(message.substr(start, end - start));
-                            }
-
-                            splitted_messages_words.push_back(splitted_words);
-                        }
-
-                        for (std::vector<std::string>& message : splitted_messages_words) {
-                            if (message[0] == Constants::MESSAGE_NEW_ENTITY) {
+                        int read_byte_index = 0;
+                        while (read_byte_index < bytes_read) {
+                            if (data[read_byte_index] == Constants::MESSAGE_NEW_ENTITY) {
                                 Player& sender_player = socket_iter->second;
 
-                                Entity::EntityType entity_type = static_cast<Entity::EntityType>(std::stoi(message[1]));
-                                Entity::EntityDirection entity_direction = static_cast<Entity::EntityDirection>(std::stoi(message[2]));
-                                int row_num = std::stoi(message[3]);
+                                Entity::EntityType entity_type = static_cast<Entity::EntityType>(data[read_byte_index + 1]);
+                                Entity::EntityDirection entity_direction = static_cast<Entity::EntityDirection>(data[read_byte_index + 2]);
+                                int row_num = data[read_byte_index + 3];
 
+                                // create new entity in server
                                 Entity new_entity(entity_type, entity_direction, row_num, next_entity_id);
                                 next_entity_id++;
-
                                 sender_player.get_entities_map()[row_num].push_back(new_entity);
 
-                                std::string to_client_message = Constants::MESSAGE_NEW_ENTITY + Constants::WORD_DELIMITER + std::to_string(entity_type) + Constants::WORD_DELIMITER + std::to_string(entity_direction) + Constants::WORD_DELIMITER + std::to_string(row_num) + Constants::WORD_DELIMITER + std::to_string(new_entity.get_id()) + Constants::MESSAGE_DELIMITER;
-                                send_to_clients(client_list, to_client_message);
+
+                                message[byte_index] = Constants::MESSAGE_NEW_ENTITY;
+                                message[byte_index + 1] = entity_type;
+                                message[byte_index + 2] = entity_direction;
+                                message[byte_index + 3] = row_num;
+                                SDLNet_Write32(new_entity.get_id(), message + byte_index + 4);
+
+                                byte_index += 8;
+                                read_byte_index += 4;
+                            } else if (data[read_byte_index] == Constants::MESSAGE_TIME) {
+                                message[byte_index] = Constants::MESSAGE_TIME;
+                                SDLNet_Write32(SDL_GetTicks(), message + byte_index + 1);
+
+                                read_byte_index += 5;
+                                byte_index += 5;
                             }
                         }
                     }
 
                     socket_iter++;
                 }
+
+                send_to_clients(client_list, message, byte_index);
             }
 
+            // Send state each second
             if (fps_manager.framecount % 60 == 0) {
-                std::vector<std::pair<TCPsocket, Player>>::iterator socket_iter = client_list.begin();
-                std::string state_string(Constants::MESSAGE_STATE_BEGIN);
-                state_string += Constants::MESSAGE_DELIMITER;
+                int byte_index = 0;
+                char message[ServerConstants::MAX_MESSAGE_SIZE] = { 0 };
 
+                message[byte_index] = Constants::MESSAGE_STATE_BEGIN;
+                int num_bytes_to_write_index = byte_index + 1;
+                byte_index += 3;
+
+                int num_entities = 0;
+                std::vector<std::pair<TCPsocket, Player>>::iterator socket_iter = client_list.begin();
                 while (socket_iter != client_list.end()) {
                     Player& player = socket_iter->second;
                     for (int row_index = 0; row_index < Constants::NUM_BATTLE_ROWS; row_index++) {
                         std::vector<Entity>& entities = player.get_entities_map()[row_index];
                         for (Entity& entity : entities) {
-                            state_string += Constants::MESSAGE_ENTITY + Constants::WORD_DELIMITER + std::to_string(entity.get_id()) + Constants::WORD_DELIMITER + std::to_string(entity.get_entity_type()) + Constants::WORD_DELIMITER + std::to_string(entity.get_entity_direction()) + Constants::WORD_DELIMITER + std::to_string(row_index) + Constants::WORD_DELIMITER + std::to_string(entity.get_entity_dst_pos()->x) + Constants::WORD_DELIMITER + std::to_string(entity.get_max_health()) + Constants::WORD_DELIMITER + std::to_string(entity.get_health()) + Constants::MESSAGE_DELIMITER;
+                            message[byte_index] = Constants::MESSAGE_ENTITY;
+                            message[byte_index + 1] = entity.get_entity_type();
+                            message[byte_index + 2] = entity.get_entity_direction();
+                            message[byte_index + 3] = row_index;
+                            SDLNet_Write32(entity.get_id(), message + byte_index + 4);
+                            NetworkUtils::write_float(entity.get_entity_dst_pos()->x, message + byte_index + 8);
+                            SDLNet_Write32(entity.get_max_health(), message + byte_index + 12);
+                            SDLNet_Write32(entity.get_health(), message + byte_index + 16);
+
+                            byte_index += 20;
+                            num_entities++;
                         }
                     }
 
                     socket_iter++;
                 }
 
-                state_string += Constants::MESSAGE_STATE_END;
+                SDLNet_Write16(num_entities, message + num_bytes_to_write_index);
+                message[byte_index] = Constants::MESSAGE_STATE_END;
+                byte_index++;
 
-                send_to_clients(client_list, state_string);
+                send_to_clients(client_list, message, byte_index);
             }
         }
 
@@ -259,9 +281,9 @@ int get_port_from_string(const std::string& port_string) {
     }
 }
 
-void send_to_clients(const std::vector<std::pair<TCPsocket, Player>>& client_list, std::string& message) {
+void send_to_clients(const std::vector<std::pair<TCPsocket, Player>>& client_list, char* message, int message_len) {
     LogUtils::log_message(LogUtils::DEBUG, message);
     for (std::pair<TCPsocket, Player> client : client_list) {
-        SDLNet_TCP_Send(client.first, message.c_str(), message.size());
+        SDLNet_TCP_Send(client.first, message, message_len);
     }
 }

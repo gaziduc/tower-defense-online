@@ -61,14 +61,12 @@ public:
     static constexpr int INITIAL_PLAYER_MONEY = 200;
 
     // Network
-    static constexpr int MAX_MESSAGE_SIZE = 1024;
-    inline static const std::string WORD_DELIMITER = " ";
-    inline static const std::string MESSAGE_DELIMITER = "\n";
-    inline static const std::string MESSAGE_NEW_ENTITY = "NEW_ENTITY";
-    inline static const std::string MESSAGE_START = "START";
-    inline static const std::string MESSAGE_ENTITY = "ENTITY";
-    inline static const std::string MESSAGE_STATE_BEGIN = "STATE_BEGIN";
-    inline static const std::string MESSAGE_STATE_END = "STATE_END";
+    static constexpr int MESSAGE_START = 0;
+    static constexpr int MESSAGE_NEW_ENTITY = 1;
+    static constexpr int MESSAGE_STATE_BEGIN = 2;
+    static constexpr int MESSAGE_ENTITY = 3;
+    static constexpr int MESSAGE_STATE_END = 4;
+    static constexpr int MESSAGE_TIME = 5;
 
     // Animations
     inline static const std::string SWORD_MAN_RES = "resources/images/sword_man";

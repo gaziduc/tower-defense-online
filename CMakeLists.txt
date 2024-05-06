@@ -32,6 +32,8 @@ add_executable(${PROJECT_NAME}
         src/Colors.h
         src/game/Game.cpp
         src/game/Game.h
+        src/network/NetworkUtils.cpp
+        src/network/NetworkUtils.h
 )
 
 add_executable(${PROJECT_NAME}-server
@@ -64,6 +66,8 @@ add_executable(${PROJECT_NAME}-server
         src/game/Game.cpp
         src/game/Game.h
         src/server/ServerConstants.h
+        src/network/NetworkUtils.cpp
+        src/network/NetworkUtils.h
 )
 
 set(CMAKE_PREFIX_PATH
