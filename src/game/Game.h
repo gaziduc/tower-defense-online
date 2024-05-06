@@ -10,7 +10,7 @@
 
 class Game {
 public:
-    static void process_game(Player& player1, Player& player2);
+    static void process_game(Player& player1, Player& player2, bool is_server_side, std::vector<std::pair<TCPsocket, Player>>& sockets);
 };
 
 

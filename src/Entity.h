@@ -7,6 +7,7 @@
 
 #include <memory>
 #include <optional>
+#include <SDL_net.h>
 
 #include "Animation.h"
 
@@ -62,6 +63,7 @@ public:
     unsigned long get_id();
     void set_health(int health);
     void set_max_health(int max_health);
+    void send_death_to_client(std::vector<std::pair<TCPsocket, Player>>& sockets);
 
 
     // Rendering

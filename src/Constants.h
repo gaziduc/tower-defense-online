@@ -67,6 +67,7 @@ public:
     static constexpr int MESSAGE_ENTITY = 3;
     static constexpr int MESSAGE_STATE_END = 4;
     static constexpr int MESSAGE_TIME = 5;
+    static constexpr int MESSAGE_ENTITY_DEATH = 6;
 
     // Animations
     inline static const std::string SWORD_MAN_RES = "resources/images/sword_man";

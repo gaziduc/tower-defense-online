@@ -11,7 +11,7 @@
 #include "../Player.h"
 
 
-void Game::process_game(Player& player1, Player& player2) {
+void Game::process_game(Player& player1, Player& player2, bool is_server_side, std::vector<std::pair<TCPsocket, Player>>& sockets) {
     for (int row_index = 0; row_index < Constants::NUM_BATTLE_ROWS; row_index++) {
         std::vector<Entity>& player1_entity_list = player1.get_entities_map()[row_index];
         std::vector<Entity>& player2_entity_list = player2.get_entities_map()[row_index];
@@ -70,6 +70,9 @@ void Game::process_game(Player& player1, Player& player2) {
         while (entity_it != player1_entity_list.end()) {
             if (entity_it->is_dead()) {
                 player2.increase_money(Entity::get_cost(entity_it->get_entity_type()));
+                if (is_server_side) {
+                    entity_it->send_death_to_client(sockets);
+                }
                 entity_it = player1_entity_list.erase(entity_it);
             } else {
                 entity_it++;
@@ -80,6 +83,9 @@ void Game::process_game(Player& player1, Player& player2) {
         while (entity_it != player2_entity_list.end()) {
             if (entity_it->is_dead()) {
                 player1.increase_money(Entity::get_cost(entity_it->get_entity_type()));
+                if (is_server_side) {
+                    entity_it->send_death_to_client(sockets);
+                }
                 entity_it = player2_entity_list.erase(entity_it);
             } else {
                 entity_it++;

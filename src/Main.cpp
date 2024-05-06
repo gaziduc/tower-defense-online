@@ -201,6 +201,8 @@ int main(int argc, char *argv[]) {
 
     Mix_PlayMusic(music, -1);
 
+    std::vector<std::pair<TCPsocket, Player>> dummy_vect;
+
     while (player.get_health() > 0 && enemy_player.get_health() > 0) {
         // Handle event
         events.update_events(window);
@@ -241,7 +243,7 @@ int main(int argc, char *argv[]) {
         }
 
         // Game (move players, attacks, etc...)
-        Game::process_game(player, enemy_player);
+        Game::process_game(player, enemy_player, false, dummy_vect);
 
         // Rendering
         SDL_RenderClear(renderer);
@@ -316,6 +318,7 @@ int main(int argc, char *argv[]) {
         float ratio_y = static_cast<float>(window_size.y) / Constants::VIEWPORT_HEIGHT;
 
 
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
         SDL_RenderClear(renderer);
 
         SDL_FRect dst_pos = {.x = Constants::SDL_POS_X_CENTERED, .y = 450, .w = 0, .h = 0};
@@ -411,14 +414,31 @@ Uint32 handle_server_actions(SDL_Window* window, SDLNet_SocketSet socket_set, TC
                 int num_entities = SDLNet_Read16(data + byte_index);
                 byte_index += 2;
 
+                Entity::EntityDirection direction = static_cast<Entity::EntityDirection>(data[byte_index]);
+                if (direction == player.get_direction()) {
+                    player.set_health(SDLNet_Read32(data + byte_index + 1));
+                    player.set_money(SDLNet_Read32(data + byte_index + 5));
+
+                    enemy_player.set_health(SDLNet_Read32(data + byte_index + 10));
+                    enemy_player.set_money(SDLNet_Read32(data + byte_index + 14));
+                } else {
+                    enemy_player.set_health(SDLNet_Read32(data + byte_index + 1));
+                    enemy_player.set_money(SDLNet_Read32(data + byte_index + 5));
+
+                    player.set_health(SDLNet_Read32(data + byte_index + 10));
+                    player.set_money(SDLNet_Read32(data + byte_index + 14));
+                }
+
+                byte_index += 18;
+
                 for (int i = 0; i < num_entities; i++) {
-                    Entity::EntityType type = static_cast<Entity::EntityType>(data[1]);
-                    Entity::EntityDirection direction = static_cast<Entity::EntityDirection>(data[2]);
-                    int row_num = data[3];
-                    Uint32 id = SDLNet_Read32(data + 4);
-                    float pos_x = NetworkUtils::read_float(data + 8);
-                    int max_health = SDLNet_Read32(data + 12);
-                    int health = SDLNet_Read32(data + 16);
+                    Entity::EntityType type = static_cast<Entity::EntityType>(data[byte_index + 1]);
+                    Entity::EntityDirection direction = static_cast<Entity::EntityDirection>(data[byte_index + 2]);
+                    int row_num = data[byte_index + 3];
+                    Uint32 id = SDLNet_Read32(data + byte_index +  4);
+                    float pos_x = NetworkUtils::read_float(data + byte_index +  8);
+                    int max_health = SDLNet_Read32(data + byte_index +  12);
+                    int health = SDLNet_Read32(data + byte_index + 16);
 
                     if (player.get_direction() == direction) {
                         std::vector<Entity>& entities_map = player.get_entities_map()[row_num];
@@ -457,6 +477,38 @@ Uint32 handle_server_actions(SDL_Window* window, SDLNet_SocketSet socket_set, TC
                 }
 
                 byte_index += 2;
+            } else if (data[byte_index] == Constants::MESSAGE_ENTITY_DEATH) {
+                Entity::EntityDirection direction = static_cast<Entity::EntityDirection>(data[byte_index + 1]);
+                unsigned row_num = data[byte_index + 2];
+                Uint32 id = SDLNet_Read32(data + byte_index + 3);
+
+                // kill entity if needed, usually an entity is killed by server and clients
+                // but sometimes there are de-syncs and you need to kill in clients
+                if (player.get_direction() == direction) {
+                    std::vector<Entity>& entities_map = player.get_entities_map()[row_num];
+                    std::vector<Entity>::iterator entity_it = entities_map.begin();
+                    while (entity_it != entities_map.end()) {
+                        if (entity_it->get_id() == id) {
+                            entity_it = entities_map.erase(entity_it);
+                            break;
+                        }
+
+                        entity_it++;
+                    }
+                } else {
+                    std::vector<Entity>& entities_map = enemy_player.get_entities_map()[row_num];
+                    std::vector<Entity>::iterator entity_it = entities_map.begin();
+                    while (entity_it != entities_map.end()) {
+                        if (entity_it->get_id() == id) {
+                            entity_it = entities_map.erase(entity_it);
+                            break;
+                        }
+
+                        entity_it++;
+                    }
+                }
+
+                byte_index += 7;
             }
         }
 

@@ -17,6 +17,10 @@ int Player::get_health() {
     return _health;
 }
 
+void Player::set_health(int health) {
+    _health = health;
+}
+
 void Player::decrease_health(int damage) {
     _health -= damage;
 }
@@ -31,6 +35,10 @@ void Player::increase_money(int money_to_add) {
 
 int Player::get_money() {
     return _money;
+}
+
+void Player::set_money(int money) {
+    _money = money;
 }
 
 Entity::EntityType Player::get_selected_entity_type() {
@@ -52,4 +60,3 @@ Entity::EntityDirection Player::get_direction() {
 void Player::set_direction(Entity::EntityDirection direction) {
     _direction = direction;
 }
-

@@ -5,6 +5,7 @@
 #include "Entity.h"
 
 #include <optional>
+#include <SDL_net.h>
 
 #include "Constants.h"
 #include "LogUtils.h"
@@ -236,6 +237,19 @@ void Entity::render_health_bar(SDL_Renderer *renderer, float ratio_x, float rati
     dst_rect.w = dst_rect.w * static_cast<float>(_health) / static_cast<float>(_max_health);
     SDL_RenderFillRectF(renderer, &dst_rect);
 }
+
+void Entity::send_death_to_client(std::vector<std::pair<TCPsocket, Player>>& sockets) {
+    char message[7] = { 0 };
+    message[0] = Constants::MESSAGE_ENTITY_DEATH;
+    message[1] = get_entity_direction();
+    message[2] = get_row_num();
+    SDLNet_Write32(get_id(), message + 3);
+
+    for (std::pair<TCPsocket, Player>& socket : sockets) {
+        SDLNet_TCP_Send(socket.first, message, 7);
+    }
+}
+
 
 
 

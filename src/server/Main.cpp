@@ -144,7 +144,7 @@ int main(int argc, char *argv[]) {
             }
 
             if (client_list.size() == 2) {
-                Game::process_game(client_list[0].second, client_list[1].second);
+                Game::process_game(client_list[0].second, client_list[1].second, true, client_list);
             }
 
             if (sockets_ready_for_reading > 0) {
@@ -214,13 +214,21 @@ int main(int argc, char *argv[]) {
             }
 
             // Send state each second
-            if (fps_manager.framecount % 60 == 0) {
+            if (fps_manager.framecount % 60 == 0 && client_list.size() == 2) {
                 int byte_index = 0;
                 char message[ServerConstants::MAX_MESSAGE_SIZE] = { 0 };
 
                 message[byte_index] = Constants::MESSAGE_STATE_BEGIN;
-                int num_bytes_to_write_index = byte_index + 1;
                 byte_index += 3;
+
+                message[byte_index] = client_list[0].second.get_direction();
+                SDLNet_Write32(client_list[0].second.get_health(), message + byte_index + 1);
+                SDLNet_Write32(client_list[0].second.get_money(), message + byte_index + 5);
+
+                message[byte_index + 9] = client_list[1].second.get_direction();
+                SDLNet_Write32(client_list[1].second.get_health(), message + byte_index + 10);
+                SDLNet_Write32(client_list[1].second.get_money(), message + byte_index + 14);
+                byte_index += 18;
 
                 int num_entities = 0;
                 std::vector<std::pair<TCPsocket, Player>>::iterator socket_iter = client_list.begin();
@@ -246,7 +254,7 @@ int main(int argc, char *argv[]) {
                     socket_iter++;
                 }
 
-                SDLNet_Write16(num_entities, message + num_bytes_to_write_index);
+                SDLNet_Write16(num_entities, message + 1);
                 message[byte_index] = Constants::MESSAGE_STATE_END;
                 byte_index++;
 

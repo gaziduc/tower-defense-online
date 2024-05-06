@@ -22,10 +22,12 @@ public:
     Player(int initial_health, int initial_money);
 
     int get_health();
+    void set_health(int health);
     void decrease_health(int damage);
     bool is_dead();
     void increase_money(int money_to_add);
     int get_money();
+    void set_money(int money);
     Entity::EntityType get_selected_entity_type();
     void set_selected_entity_type(Entity::EntityType selected_entity_type);
     std::map<unsigned, std::vector<Entity>>& get_entities_map();
