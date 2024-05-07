@@ -188,6 +188,7 @@ int main(int argc, char *argv[]) {
                                 next_entity_id++;
                                 sender_player.get_entities_map()[row_num].push_back(new_entity);
 
+                                sender_player.increase_money(-Entity::get_cost(entity_type));
 
                                 message[byte_index] = Constants::MESSAGE_NEW_ENTITY;
                                 message[byte_index + 1] = entity_type;
@@ -214,7 +215,7 @@ int main(int argc, char *argv[]) {
             }
 
             // Send state each second
-            if (fps_manager.framecount % 60 == 0 && client_list.size() == 2) {
+            if (fps_manager.framecount % 15 == 0 && client_list.size() == 2) {
                 int byte_index = 0;
                 char message[ServerConstants::MAX_MESSAGE_SIZE] = { 0 };
 
@@ -245,8 +246,9 @@ int main(int argc, char *argv[]) {
                             NetworkUtils::write_float(entity.get_entity_dst_pos()->x, message + byte_index + 8);
                             SDLNet_Write32(entity.get_max_health(), message + byte_index + 12);
                             SDLNet_Write32(entity.get_health(), message + byte_index + 16);
+                            message[byte_index + 20] = entity.get_state();
 
-                            byte_index += 20;
+                            byte_index += 21;
                             num_entities++;
                         }
                     }

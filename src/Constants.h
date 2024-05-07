@@ -6,10 +6,12 @@
 #define CONSTANTS_H
 
 #include <memory>
+#include <SDL_mixer.h>
 #include <SDL_ttf.h>
 #include <string>
 
 #include "Animation.h"
+#include "Entity.h"
 #include "LogUtils.h"
 
 class Constants {
@@ -17,6 +19,7 @@ private:
     static std::vector<std::shared_ptr<Animation>> _anims;
     static std::vector<SDL_Point> _anim_sizes;
     static std::vector<TTF_Font*> _fonts;
+    static std::vector<Mix_Chunk*> _chunks;
 
 public:
     enum Anim {
@@ -77,11 +80,13 @@ public:
     static constexpr LogUtils::Level LOG_LEVEL = LogUtils::WARN;
 
     static void load_animations(SDL_Window *window, SDL_Renderer *renderer);
-    static void load_animations_sizes();
-    static SDL_Point get_animation_size(Anim anim);
-    static void load_fonts(SDL_Window *window);
     static std::shared_ptr<Animation> get_animation(Anim anim);
+
+    static void load_fonts(SDL_Window *window);
     static TTF_Font* get_font(Font font);
+
+    static void load_chunks(SDL_Window *window);
+    static void play_chunk(Entity::EntityType type);
 };
 
 #endif //CONSTANTS_H

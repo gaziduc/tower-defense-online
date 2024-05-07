@@ -6,14 +6,17 @@
 
 #include <memory>
 #include <SDL_image.h>
+#include <SDL_mixer.h>
 #include <SDL_ttf.h>
 
 #include "AnimationEntity.h"
+#include "Entity.h"
 #include "ErrorUtils.h"
 
 std::vector<std::shared_ptr<Animation>> Constants::_anims;
 std::vector<TTF_Font*> Constants::_fonts;
 std::vector<SDL_Point> Constants::_anim_sizes;
+std::vector<Mix_Chunk*> Constants::_chunks;
 
 void Constants::load_animations(SDL_Window *window, SDL_Renderer *renderer) {
     // Sword
@@ -42,21 +45,10 @@ void Constants::load_animations(SDL_Window *window, SDL_Renderer *renderer) {
 
     AnimationEntity health(window, renderer, "resources/images/health.webp");
     _anims.push_back(std::make_shared<AnimationEntity>(health));
-
-    load_animations_sizes();
 }
 
-void Constants::load_animations_sizes() {
-    for (std::shared_ptr<Animation>& animation : _anims) {
-        int w = 0;
-        int h = 0;
-        SDL_QueryTexture(animation->get_texture(0), nullptr, nullptr, &w, &h);
-        _anim_sizes.push_back({.x = w, .y = h});
-    }
-}
-
-SDL_Point Constants::get_animation_size(Anim anim) {
-    return _anim_sizes[anim];
+std::shared_ptr<Animation> Constants::get_animation(Anim anim) {
+    return _anims[anim];
 }
 
 void Constants::load_fonts(SDL_Window *window) {
@@ -68,11 +60,30 @@ void Constants::load_fonts(SDL_Window *window) {
     _fonts.push_back(font);
 }
 
-std::shared_ptr<Animation> Constants::get_animation(Anim anim) {
-    return _anims[anim];
-}
-
 TTF_Font* Constants::get_font(Font font) {
     return _fonts[font];
 }
+
+void Constants::load_chunks(SDL_Window *window) {
+    Mix_Chunk* slash = Mix_LoadWAV("resources/audio/slash.wav");
+    if (slash == nullptr) {
+        ErrorUtils::display_last_mix_error_and_quit(window);
+    }
+    _chunks.push_back(slash);
+
+    Mix_Chunk* shoot = Mix_LoadWAV("resources/audio/shoot.wav");
+    if (shoot == nullptr) {
+        ErrorUtils::display_last_mix_error_and_quit(window);
+    }
+    _chunks.push_back(shoot);
+}
+
+void Constants::play_chunk(Entity::EntityType type) {
+    if (_chunks.empty()) {
+        return; // server side
+    }
+
+    Mix_PlayChannel(-1, _chunks[type], 0);
+}
+
 

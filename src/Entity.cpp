@@ -15,25 +15,17 @@ Entity::Entity(EntityType type, EntityDirection direction, unsigned row_num, Uin
     _id = entity_id;
     _entity_type = type;
     _entity_direction = direction;
-    _entity_state = EntityState::RUNNING;
     _animation_frame = 0;
     _row_num = row_num;
-
-    unsigned first_anim_index = static_cast<unsigned>(type) * Constants::NUM_STATE_PER_ENTITY;
-    SDL_Point size = Constants::get_animation_size(static_cast<Constants::Anim>(first_anim_index));
-    float height_ratio = static_cast<float>(size.x) / Constants::ENTITY_HEIGHT;
-    float final_width = static_cast<float>(size.y) / height_ratio;
-    _dst_pos.x = direction == EntityDirection::LEFT_TO_RIGHT ? -final_width : Constants::VIEWPORT_WIDTH;
-    _dst_pos.y = static_cast<float>(row_num + 0.5) * Constants::ROW_HEIGHT - Constants::ENTITY_HEIGHT / 2;
-    _dst_pos.w = final_width;
-    _dst_pos.h = Constants::ENTITY_HEIGHT;
     _max_health = get_max_health();
     _health = _max_health;
 
-
+    unsigned first_anim_index = static_cast<unsigned>(type) * Constants::NUM_STATE_PER_ENTITY;
     for (unsigned i = first_anim_index; i < first_anim_index + Constants::NUM_STATE_PER_ENTITY; i++) {
         _animations.push_back(Constants::get_animation(static_cast<Constants::Anim>(i)));
     }
+
+    set_entity_state(RUNNING, true);
 }
 
 Entity::EntityType Entity::get_entity_type() {
@@ -44,7 +36,7 @@ int Entity::get_row_num() {
     return _row_num;
 }
 
-void Entity::set_entity_state(EntityState state) {
+void Entity::set_entity_state(EntityState state, bool is_init) {
     _entity_state = state;
     _animation_frame = 0;
 
@@ -56,6 +48,9 @@ void Entity::set_entity_state(EntityState state) {
     _dst_pos.y = static_cast<float>(_row_num + 0.5) * Constants::ROW_HEIGHT - Constants::ENTITY_HEIGHT / 2;
     _dst_pos.w = final_width;
     _dst_pos.h = Constants::ENTITY_HEIGHT;
+    if (is_init) {
+        _dst_pos.x = _entity_direction == EntityDirection::LEFT_TO_RIGHT ? -final_width : Constants::VIEWPORT_WIDTH;
+    }
 }
 
 SDL_Texture* Entity::get_entity_texture() {
@@ -72,20 +67,18 @@ void Entity::set_pos_x(float pos_x) {
 
 void Entity::move(int num_times) {
     if (_entity_state != EntityState::RUNNING) {
-        set_entity_state(EntityState::RUNNING);
+        set_entity_state(EntityState::RUNNING, false);
     } else {
-        for (int i = 0; i < num_times; i++) {
-            _animation_frame++;
-            reset_animation_ifn();
-        }
+        _animation_frame++;
+        reset_animation_ifn();
     }
-
-    _dst_pos.x += _entity_direction == EntityDirection::LEFT_TO_RIGHT ? 1.5 * static_cast<float>(num_times) : -1.5 * static_cast<float>(num_times);
+    float direction_vector_x = static_cast<float>(num_times) * 2;
+    _dst_pos.x += _entity_direction == EntityDirection::LEFT_TO_RIGHT ? direction_vector_x : -direction_vector_x;
 }
 
 void Entity::set_state(EntityState state) {
     if (_entity_state != state) {
-        set_entity_state(state);
+        set_entity_state(state, false);
     } else {
         _animation_frame++;
         reset_animation_ifn();
@@ -97,6 +90,7 @@ void Entity::attack(Entity& enemy) {
 
     if (_animation_frame == 0) {
         enemy.decrease_health(get_attack_damage());
+        Constants::play_chunk(_entity_type);
     }
 }
 
@@ -105,6 +99,7 @@ void Entity::attack(Player& enemy) {
 
     if (_animation_frame == 0) {
         enemy.decrease_health(get_attack_damage());
+        Constants::play_chunk(_entity_type);
     }
 }
 
@@ -181,7 +176,7 @@ bool Entity::can_attack_entity(std::optional<Entity>& enemy_entity_first) {
 
 bool Entity::can_attack_player(std::optional<Entity>& enemy_entity_first) {
     if (_entity_direction == LEFT_TO_RIGHT) {
-        return !enemy_entity_first && get_entity_dst_pos()->x + get_entity_dst_pos()->w + get_range() >= 1920;
+        return !enemy_entity_first && get_entity_dst_pos()->x + get_entity_dst_pos()->w + get_range() >= Constants::VIEWPORT_WIDTH;
     } else if (_entity_direction == RIGHT_TO_LEFT) {
         return !enemy_entity_first && get_entity_dst_pos()->x - get_range() <= 0;
     } else {
@@ -221,6 +216,10 @@ void Entity::set_max_health(int max_health) {
 
 unsigned long Entity::get_id() {
     return  _id;
+}
+
+Entity::EntityState Entity::get_state() {
+    return _entity_state;
 }
 
 

@@ -86,7 +86,9 @@ int main(int argc, char *argv[]) {
     if (background == nullptr) {
         ErrorUtils::display_last_img_error_and_quit(window);
     }
+
     Constants::load_fonts(window);
+    Constants::load_chunks(window);
 
     FPSmanager fps_manager;
     SDL_initFramerate(&fps_manager);
@@ -439,6 +441,7 @@ Uint32 handle_server_actions(SDL_Window* window, SDLNet_SocketSet socket_set, TC
                     float pos_x = NetworkUtils::read_float(data + byte_index +  8);
                     int max_health = SDLNet_Read32(data + byte_index +  12);
                     int health = SDLNet_Read32(data + byte_index + 16);
+                    Entity::EntityState state = static_cast<Entity::EntityState>(data[byte_index + 20]);
 
                     if (player.get_direction() == direction) {
                         std::vector<Entity>& entities_map = player.get_entities_map()[row_num];
@@ -447,7 +450,9 @@ Uint32 handle_server_actions(SDL_Window* window, SDLNet_SocketSet socket_set, TC
                                 entity.set_max_health(max_health);
                                 entity.set_health(health);
                                 entity.set_pos_x(pos_x);
-                                entity.move(latency_frames);
+                                if (state == Entity::RUNNING) {
+                                    entity.move(latency_frames);
+                                }
                             }
                         }
                     } else {
@@ -457,12 +462,14 @@ Uint32 handle_server_actions(SDL_Window* window, SDLNet_SocketSet socket_set, TC
                                 entity.set_max_health(max_health);
                                 entity.set_health(health);
                                 entity.set_pos_x(pos_x);
-                                entity.move(latency_frames);
+                                if (state == Entity::RUNNING) {
+                                    entity.move(latency_frames);
+                                }
                             }
                         }
                     }
 
-                    byte_index += 20;
+                    byte_index += 21;
                 }
 
                 byte_index++;

@@ -40,7 +40,7 @@ public:
     Entity(EntityType type, EntityDirection direction, unsigned row_num, Uint32 entity_id);
     EntityType get_entity_type();
     int get_row_num();
-    void set_entity_state(EntityState state);
+    void set_entity_state(EntityState state, bool is_init);
     SDL_Texture* get_entity_texture();
     SDL_FRect* get_entity_dst_pos();
     void set_pos_x(float pos_x);
@@ -63,11 +63,13 @@ public:
     unsigned long get_id();
     void set_health(int health);
     void set_max_health(int max_health);
-    void send_death_to_client(std::vector<std::pair<TCPsocket, Player>>& sockets);
-
+    EntityState get_state();
 
     // Rendering
     void render_health_bar(SDL_Renderer *renderer, float ratio_x, float ratio_y);
+
+    // Network
+    void send_death_to_client(std::vector<std::pair<TCPsocket, Player>>& sockets);
 
 private:
     EntityType _entity_type;
