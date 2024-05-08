@@ -36,6 +36,7 @@ public:
         // Icons
         COIN,
         HEALTH,
+        ARROW,
 
         NUM_ANIM
     };
@@ -86,7 +87,9 @@ public:
     static TTF_Font* get_font(Font font);
 
     static void load_chunks(SDL_Window *window);
-    static void play_chunk(Entity::EntityType type);
+    static void play_entity_attack_chunk(Entity::EntityType type);
+    static void play_drop_entity_chunk();
+    static void play_error_chunk();
 };
 
 #endif //CONSTANTS_H

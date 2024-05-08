@@ -9,6 +9,8 @@
 #include <windows.h>
 #endif
 
+#include <sstream>
+
 #include "Animation.h"
 #include "AnimationEntity.h"
 #include "Colors.h"
@@ -50,7 +52,7 @@ int main(int argc, char *argv[]) {
         ErrorUtils::display_last_sdl_error_and_quit(window);
     }
 
-    int img_flags = IMG_INIT_PNG | IMG_INIT_WEBP;
+    int img_flags = IMG_INIT_JPG | IMG_INIT_PNG | IMG_INIT_WEBP;
     int img_initted_flags = IMG_Init(img_flags);
     if ((img_initted_flags & img_flags) != img_flags) {
         ErrorUtils::display_last_img_error_and_quit(window);
@@ -70,6 +72,8 @@ int main(int argc, char *argv[]) {
         ErrorUtils::display_last_mix_error_and_quit(window);
     }
 
+    Mix_AllocateChannels(32);
+
     if (SDLNet_Init() == -1) {
         ErrorUtils::display_last_net_error_and_quit(window);
     }
@@ -80,8 +84,14 @@ int main(int argc, char *argv[]) {
         ErrorUtils::display_last_mix_error_and_quit(window);
     }
 
+    Mix_PlayMusic(music, -1);
+
     // Load resources
     Constants::load_animations(window, renderer);
+    SDL_Texture *title_bg = IMG_LoadTexture(renderer, "resources/images/backgrounds/title.jpg");
+    if (title_bg == nullptr) {
+        ErrorUtils::display_last_img_error_and_quit(window);
+    }
     SDL_Texture *background = IMG_LoadTexture(renderer, "resources/images/backgrounds/0.png");
     if (background == nullptr) {
         ErrorUtils::display_last_img_error_and_quit(window);
@@ -126,8 +136,17 @@ int main(int argc, char *argv[]) {
             events.press_up_key(SDL_SCANCODE_RETURN);
             events.press_up_key(SDL_SCANCODE_KP_ENTER);
 
+            std::vector<std::string> result;
+            std::stringstream ss(input);
+            std::string item;
+
+            while (getline(ss, item, ':')) {
+                result.push_back(item);
+            }
+
+
             IPaddress ip;
-            if (SDLNet_ResolveHost(&ip, input.c_str(), 7777) == -1) {
+            if (SDLNet_ResolveHost(&ip, result[0].c_str(), std::stoi(result[1])) == -1) {
                 ErrorUtils::display_last_net_error_and_quit(window);
             }
 
@@ -146,11 +165,19 @@ int main(int argc, char *argv[]) {
         float ratio_y = static_cast<float>(window_size.y) / Constants::VIEWPORT_HEIGHT;
 
         SDL_RenderClear(renderer);
-        std::string enter_ip = "Enter the server IP address or hostname:";
-        SDL_FRect dst_pos = {.x = Constants::SDL_POS_X_CENTERED, .y = 450, .w = 0, .h = 0};
-        RenderUtils::render_text_shaded(window, renderer, enter_ip, &dst_pos, {.r = 255, .g = 255, .b = 255, .a = SDL_ALPHA_OPAQUE},  {.r = 0, .g = 0, .b = 0, .a = SDL_ALPHA_OPAQUE}, ratio_x, ratio_y);
-        dst_pos = {.x = Constants::SDL_POS_X_CENTERED, .y = 550, .w = 0, .h = 0};
-        RenderUtils::render_text_shaded_prompt(window, renderer, input, &dst_pos, {.r = 255, .g = 255, .b = 255, .a = SDL_ALPHA_OPAQUE},  {.r = 0, .g = 0, .b = 0, .a = SDL_ALPHA_OPAQUE}, ratio_x, ratio_y);
+        SDL_RenderCopy(renderer, title_bg, nullptr, nullptr);
+        SDL_FRect dst_pos = {.x = 0, .y = 350 * ratio_y, .w = Constants::VIEWPORT_WIDTH * ratio_x, .h = 400 * ratio_y};
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 128);
+        SDL_RenderFillRectF(renderer, &dst_pos);
+
+        std::string enter_ip = "Enter the server IPv4 address or hostname, and the server port.";
+        std::string example = "Example: 192.168.1.86:7777";
+        dst_pos = {.x = Constants::SDL_POS_X_CENTERED, .y = 400, .w = 0, .h = 0};
+        RenderUtils::render_text(window, renderer, enter_ip, &dst_pos, {.r = 255, .g = 255, .b = 255, .a = SDL_ALPHA_OPAQUE}, ratio_x, ratio_y);
+        dst_pos = {.x = Constants::SDL_POS_X_CENTERED, .y = 500, .w = 0, .h = 0};
+        RenderUtils::render_text(window, renderer, example, &dst_pos, {.r = 255, .g = 255, .b = 255, .a = SDL_ALPHA_OPAQUE}, ratio_x, ratio_y);
+        dst_pos = {.x = Constants::SDL_POS_X_CENTERED, .y = 600, .w = 0, .h = 0};
+        RenderUtils::render_text_prompt(window, renderer, input, &dst_pos, {.r = 255, .g = 255, .b = 255, .a = SDL_ALPHA_OPAQUE}, ratio_x, ratio_y);
         SDL_RenderPresent(renderer);
 
         SDL_framerateDelay(&fps_manager);
@@ -191,17 +218,19 @@ int main(int argc, char *argv[]) {
         float ratio_y = static_cast<float>(window_size.y) / Constants::VIEWPORT_HEIGHT;
 
         SDL_RenderClear(renderer);
+        SDL_RenderCopy(renderer, title_bg, nullptr, nullptr);
+        SDL_FRect dst_pos = {.x = 0, .y = 400 * ratio_y, .w = Constants::VIEWPORT_WIDTH * ratio_x, .h = 300 * ratio_y};
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 128);
+        SDL_RenderFillRectF(renderer, &dst_pos);
+
         std::string waiting_text = "Waiting for another player...";
-        SDL_FRect dst_pos = {.x = Constants::SDL_POS_X_CENTERED, .y = 500, .w = 0, .h = 0};
-        RenderUtils::render_text_shaded(window, renderer, waiting_text, &dst_pos, {.r = 255, .g = 255, .b = 255, .a = SDL_ALPHA_OPAQUE},  {.r = 0, .g = 0, .b = 0, .a = SDL_ALPHA_OPAQUE}, ratio_x, ratio_y);
+        dst_pos = {.x = Constants::SDL_POS_X_CENTERED, .y = 500, .w = 0, .h = 0};
+        RenderUtils::render_text(window, renderer, waiting_text, &dst_pos, {.r = 255, .g = 255, .b = 255, .a = SDL_ALPHA_OPAQUE}, ratio_x, ratio_y);
         SDL_RenderPresent(renderer);
 
 
         SDL_framerateDelay(&fps_manager);
     }
-
-
-    Mix_PlayMusic(music, -1);
 
     std::vector<std::pair<TCPsocket, Player>> dummy_vect;
 
@@ -227,6 +256,9 @@ int main(int argc, char *argv[]) {
                 if (player.get_money() >= entity_cost) {
                     player.increase_money(-entity_cost);
                     send_new_entity_to_server(socket, player.get_selected_entity_type(), player.get_direction(), row_num);
+                    Constants::play_drop_entity_chunk();
+                } else {
+                    Constants::play_error_chunk();
                 }
             }
         }
@@ -273,9 +305,13 @@ int main(int argc, char *argv[]) {
         RenderUtils::render_animation_entity_with_text(window, renderer, Constants::HEALTH, health_string, &dst_pos, ratio_x, ratio_y);
 
         if (row_num >= 0 && row_num < Constants::NUM_BATTLE_ROWS) {
-            SDL_SetRenderDrawColor(renderer, 128, 128, 128 ,64);
+            SDL_SetRenderDrawColor(renderer, 128, 128, 128,64);
             SDL_FRect dst_pos = { .x = 0, .y = row_num * Constants::ROW_HEIGHT * ratio_y, .w = Constants::VIEWPORT_WIDTH * ratio_x, .h = Constants::ROW_HEIGHT * ratio_y };
             SDL_RenderFillRectF(renderer, &dst_pos);
+
+            dst_pos.x = player.get_direction() == Entity::LEFT_TO_RIGHT ? 0 : (Constants::VIEWPORT_WIDTH - 80) * ratio_x;
+            dst_pos.w = 80 * ratio_x;
+            RenderUtils::render_animation_entity_ex(renderer, Constants::ARROW, &dst_pos, 90, nullptr, player.get_direction() == Entity::LEFT_TO_RIGHT ? SDL_FLIP_NONE : SDL_FLIP_VERTICAL);
         }
 
         // Rendering entities
@@ -322,10 +358,15 @@ int main(int argc, char *argv[]) {
 
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
         SDL_RenderClear(renderer);
+        SDL_RenderCopy(renderer, title_bg, nullptr, nullptr);
 
-        SDL_FRect dst_pos = {.x = Constants::SDL_POS_X_CENTERED, .y = 450, .w = 0, .h = 0};
+        SDL_FRect dst_pos = {.x = 0, .y = 450 * ratio_y, .w = Constants::VIEWPORT_WIDTH * ratio_x, .h = 200 * ratio_y};
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 128);
+        SDL_RenderFillRectF(renderer, &dst_pos);
+
+        dst_pos = {.x = Constants::SDL_POS_X_CENTERED, .y = 500, .w = 0, .h = 0};
         std::string end_str(player.get_health() <= 0 ? "You lost!" : "You won!");
-        RenderUtils::render_text_shaded(window, renderer, end_str, &dst_pos, {.r = 255, .g = 255, .b = 255, .a = SDL_ALPHA_OPAQUE}, {.r = 0, .g = 0, .b = 0, .a = SDL_ALPHA_OPAQUE}, ratio_x, ratio_y);
+        RenderUtils::render_text(window, renderer, end_str, &dst_pos, {.r = 255, .g = 255, .b = 255, .a = SDL_ALPHA_OPAQUE}, ratio_x, ratio_y);
 
         SDL_RenderPresent(renderer);
 

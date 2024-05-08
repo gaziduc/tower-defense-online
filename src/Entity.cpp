@@ -90,7 +90,7 @@ void Entity::attack(Entity& enemy) {
 
     if (_animation_frame == 0) {
         enemy.decrease_health(get_attack_damage());
-        Constants::play_chunk(_entity_type);
+        Constants::play_entity_attack_chunk(_entity_type);
     }
 }
 
@@ -99,7 +99,7 @@ void Entity::attack(Player& enemy) {
 
     if (_animation_frame == 0) {
         enemy.decrease_health(get_attack_damage());
-        Constants::play_chunk(_entity_type);
+        Constants::play_entity_attack_chunk(_entity_type);
     }
 }
 

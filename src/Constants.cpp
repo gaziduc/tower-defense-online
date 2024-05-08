@@ -39,12 +39,14 @@ void Constants::load_animations(SDL_Window *window, SDL_Renderer *renderer) {
     AnimationEntity gun_man_idle(window, renderer, GUN_MAN_RES + "/idle", 10, 3);
     _anims.push_back(std::make_shared<AnimationEntity>(gun_man_idle));
 
-    // Coin
     AnimationEntity coin(window, renderer, "resources/images/coin.webp");
     _anims.push_back(std::make_shared<AnimationEntity>(coin));
 
     AnimationEntity health(window, renderer, "resources/images/health.webp");
     _anims.push_back(std::make_shared<AnimationEntity>(health));
+
+    AnimationEntity arrow(window, renderer, "resources/images/arrow.gif");
+    _anims.push_back(std::make_shared<AnimationEntity>(arrow));
 }
 
 std::shared_ptr<Animation> Constants::get_animation(Anim anim) {
@@ -76,14 +78,34 @@ void Constants::load_chunks(SDL_Window *window) {
         ErrorUtils::display_last_mix_error_and_quit(window);
     }
     _chunks.push_back(shoot);
+
+    Mix_Chunk* drop_entity = Mix_LoadWAV("resources/audio/drop_entity.wav");
+    if (drop_entity == nullptr) {
+        ErrorUtils::display_last_mix_error_and_quit(window);
+    }
+    _chunks.push_back(drop_entity);
+
+    Mix_Chunk* error = Mix_LoadWAV("resources/audio/error.wav");
+    if (error == nullptr) {
+        ErrorUtils::display_last_mix_error_and_quit(window);
+    }
+    _chunks.push_back(error);
 }
 
-void Constants::play_chunk(Entity::EntityType type) {
+void Constants::play_entity_attack_chunk(Entity::EntityType type) {
     if (_chunks.empty()) {
         return; // server side
     }
 
     Mix_PlayChannel(-1, _chunks[type], 0);
+}
+
+void Constants::play_drop_entity_chunk() {
+    Mix_PlayChannel(-1, _chunks[2], 0);
+}
+
+void Constants::play_error_chunk() {
+    Mix_PlayChannel(-1, _chunks[3], 0);
 }
 
 
