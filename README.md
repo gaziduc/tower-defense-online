@@ -5,6 +5,7 @@
 ```shell
 git clone https://github.com/gaziduc/tower-defense-online
 ```
+First of all, you need the 'conan' dependency manager (you can get it at https://conan.io/downloads) to get the 'miniupnpc' library. Don't forget to add it to the PATH environment variable.
 
 Download a copy of the SDL2, SDL2_image, SDL2_mixer, SDL2_net and SDL2_ttf development libraries at:
 
@@ -22,7 +23,7 @@ If necessary, modify the libraries paths in CMakeLists.txt, according to the lib
 
 ```cmake
 set(CMAKE_PREFIX_PATH
-        ${CMAKE_SOURCE_DIR}/SDL2-2.30.2/cmake
+        ${CMAKE_SOURCE_DIR}/SDL2-2.30.3/cmake
         ${CMAKE_SOURCE_DIR}/SDL2_image-2.8.2/cmake
         ${CMAKE_SOURCE_DIR}/SDL2_mixer-2.8.0/cmake
         ${CMAKE_SOURCE_DIR}/SDL2_net-2.2.0/cmake

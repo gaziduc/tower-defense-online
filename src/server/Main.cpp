@@ -1,9 +1,6 @@
 //
 // Created by Gazi on 4/27/2024.
 //
-#ifdef _WIN32
-#include <windows.h>
-#endif
 
 #include <iostream>
 #include <SDL_image.h>
@@ -17,19 +14,25 @@
 #include "../LogUtils.h"
 #include "../Player.h"
 #include "ServerConstants.h"
+#include "UPnP.h"
 #include "../framerate/SDL2_framerate.h"
 #include "../game/Game.h"
 #include "../network/NetworkUtils.h"
 
-int get_port_from_string(const std::string& port_string);
-void send_to_clients(const std::vector<std::pair<TCPsocket, Player>>& client_list, char* message, int message_len);
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
+int get_port_from_string(const std::string &port_string);
+void send_to_clients(const std::vector<std::pair<TCPsocket, Player> > &client_list, char *message, int message_len);
 
 int main(int argc, char *argv[]) {
     Colors::enable_colors_ifn();
 #ifdef _WIN32
     SetConsoleOutputCP(CP_UTF8);
 #endif
-    std::cout << Colors::yellow() << "Welcome to " << Constants::PROJECT_NAME_SERVER << "!" << Colors::reset() << std::endl;
+    std::cout << Colors::yellow() << "Welcome to " << Constants::PROJECT_NAME_SERVER << "!" << Colors::reset() <<
+            std::endl;
 
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
         ErrorUtils::display_last_net_error_and_quit(nullptr);
@@ -53,7 +56,7 @@ int main(int argc, char *argv[]) {
     std::cout << "Loading resources..." << std::endl;
 
     // Load resources
-    SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+    SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, 0);
     Constants::load_animations(nullptr, renderer);
 
     int port = -1;
@@ -96,6 +99,8 @@ int main(int argc, char *argv[]) {
         }
     }
 
+    UPnP::handle_upnp(port);
+
     std::vector<std::pair<TCPsocket, Player>> client_list;
     SDLNet_SocketSet socket_set = SDLNet_AllocSocketSet(ServerConstants::MAX_CLIENTS);
 
@@ -105,7 +110,7 @@ int main(int argc, char *argv[]) {
     SDL_initFramerate(&fps_manager);
     SDL_setFramerate(&fps_manager, 60);
 
-    std::cout << "Server is now listening..." << std::endl;
+    std::cout << Colors::green() << "Server is now listening..." << Colors::reset() << std::endl;
 
     while (true) {
         TCPsocket potential_new_client_socket = SDLNet_TCP_Accept(server_socket);

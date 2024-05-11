@@ -144,6 +144,9 @@ int main(int argc, char *argv[]) {
                 result.push_back(item);
             }
 
+            if (result.size() < 2) {
+                ErrorUtils::display_error_and_quit(window, "Invalid IP/Hostname or port.");
+            }
 
             IPaddress ip;
             if (SDLNet_ResolveHost(&ip, result[0].c_str(), std::stoi(result[1])) == -1) {

@@ -4,7 +4,6 @@
 
 #include "ErrorUtils.h"
 
-#include <chrono>
 #include <SDL_image.h>
 #include <SDL_messagebox.h>
 #include <SDL_mixer.h>

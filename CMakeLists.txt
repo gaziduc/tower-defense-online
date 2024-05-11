@@ -68,10 +68,12 @@ add_executable(${PROJECT_NAME}-server
         src/server/ServerConstants.h
         src/network/NetworkUtils.cpp
         src/network/NetworkUtils.h
+        src/server/UPnP.cpp
+        src/server/UPnP.h
 )
 
 set(CMAKE_PREFIX_PATH
-        ${CMAKE_SOURCE_DIR}/SDL2-2.30.2/cmake
+        ${CMAKE_SOURCE_DIR}/SDL2-2.30.3/cmake
         ${CMAKE_SOURCE_DIR}/SDL2_image-2.8.2/cmake
         ${CMAKE_SOURCE_DIR}/SDL2_mixer-2.8.0/cmake
         ${CMAKE_SOURCE_DIR}/SDL2_net-2.2.0/cmake
@@ -87,6 +89,7 @@ find_package(SDL2_image REQUIRED)
 find_package(SDL2_mixer REQUIRED)
 find_package(SDL2_net REQUIRED)
 find_package(SDL2_ttf REQUIRED)
+find_package(miniupnpc)
 
 if (TARGET SDL2::SDL2main)
     target_link_libraries(${PROJECT_NAME} PRIVATE SDL2::SDL2main)
@@ -107,4 +110,5 @@ target_link_libraries(${PROJECT_NAME}-server PRIVATE
         SDL2_mixer::SDL2_mixer
         SDL2_net::SDL2_net
         SDL2_ttf::SDL2_ttf
+        miniupnpc::miniupnpc
 )
