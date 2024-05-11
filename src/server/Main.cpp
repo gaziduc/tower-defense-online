@@ -32,8 +32,7 @@ int main(int argc, char *argv[]) {
 #ifdef _WIN32
     SetConsoleOutputCP(CP_UTF8);
 #endif
-    std::cout << Colors::yellow() << "Welcome to " << Constants::PROJECT_NAME_SERVER << "!" << Colors::reset() <<
-            std::endl;
+    std::cout << Colors::yellow() << "Welcome to " << Constants::PROJECT_NAME_SERVER << "!" << Colors::reset() << std::endl;
 
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
         ErrorUtils::display_last_net_error_and_quit(nullptr);
@@ -296,12 +295,17 @@ int main(int argc, char *argv[]) {
 
 int get_port_from_string(const std::string& port_string) {
     try {
-        return std::stoi(port_string);
+        int port_number = std::stoi(port_string);
+        if (port_number < 0 || port_number > 65535) {
+            std::cout << "Error: '" << Colors::green() << port_string << Colors::reset() << "' should be between 0 and 65535." << std::endl;
+            return -1;
+        }
+        return port_number;
     } catch (std::invalid_argument const& ex) {
-        std::cout << "Error: " << Colors::green() << port_string << Colors::reset() << " is not a valid port number (invalid argument)." << std::endl;
+        std::cout << "Error: '" << Colors::green() << port_string << Colors::reset() << "' is not a valid port number (invalid argument)." << std::endl;
         return -1;
     } catch (std::out_of_range const& ex) {
-        std::cout << "Error: " << Colors::green() << port_string << Colors::reset() << " is not a valid port number (out of range)." << std::endl;
+        std::cout << "Error: '" << Colors::green() << port_string << Colors::reset() << "' is not a valid port number (out of range)." << std::endl;
         return -1;
     }
 }
