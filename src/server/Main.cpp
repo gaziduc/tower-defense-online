@@ -15,6 +15,7 @@
 #include "../Player.h"
 #include "ServerConstants.h"
 #include "UPnP.h"
+#include "../Events.h"
 #include "../framerate/SDL2_framerate.h"
 #include "../game/Game.h"
 #include "../network/NetworkUtils.h"
@@ -110,9 +111,16 @@ int main(int argc, char *argv[]) {
     SDL_initFramerate(&fps_manager);
     SDL_setFramerate(&fps_manager, 60);
 
-    std::cout << Colors::green() << "Server is now listening..." << Colors::reset() << std::endl;
+    std::cout << Colors::green() << "Server is now listening for clients..." << Colors::reset() << " (Ctrl + C to quit)" << std::endl;
+
+    Events events;
 
     while (true) {
+        events.update_events(window);
+        if (events.is_quit()) {
+            break;
+        }
+
         TCPsocket potential_new_client_socket = SDLNet_TCP_Accept(server_socket);
 
         // Accept new connections
@@ -204,11 +212,13 @@ int main(int argc, char *argv[]) {
                                 byte_index += 8;
                                 read_byte_index += 4;
                             } else if (data[read_byte_index] == Constants::MESSAGE_TIME) {
-                                message[byte_index] = Constants::MESSAGE_TIME;
-                                SDLNet_Write32(SDL_GetTicks(), message + byte_index + 1);
+                                char time_message[5] = { 0 };
+                                time_message[0] = Constants::MESSAGE_TIME;
+                                SDLNet_Write32(SDL_GetTicks(), time_message + 1);
+                                // Send immediatly only to the cleint asking
+                                SDLNet_TCP_Send(socket_iter->first, time_message, 5);
 
                                 read_byte_index += 5;
-                                byte_index += 5;
                             }
                         }
                     }
@@ -219,7 +229,7 @@ int main(int argc, char *argv[]) {
                 send_to_clients(client_list, message, byte_index);
             }
 
-            // Send state each second
+            // Send state
             if (fps_manager.framecount % 15 == 0 && client_list.size() == 2) {
                 int byte_index = 0;
                 char message[ServerConstants::MAX_MESSAGE_SIZE] = { 0 };

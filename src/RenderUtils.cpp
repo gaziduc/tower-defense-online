@@ -71,7 +71,7 @@ void RenderUtils::render_animation_entity_with_text(SDL_Window* window, SDL_Rend
     dst_pos->h *= ratio_y;
     render_animation_entity(renderer, anim, dst_pos);
     dst_pos->x = old_dst_pos.x + old_dst_pos.w + 20;
-    dst_pos->y = old_dst_pos.y;
+    dst_pos->y = old_dst_pos.y + 8; // FIXME
     dst_pos->w = old_dst_pos.w;
     dst_pos->h = old_dst_pos.h;
     render_text(window, renderer, text, dst_pos, {.r = 0, .g = 0, .b = 0, .a = SDL_ALPHA_OPAQUE}, ratio_x, ratio_y);

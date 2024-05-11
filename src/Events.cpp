@@ -103,7 +103,7 @@ void Events::update_events(SDL_Window *window) {
         }
     }
 
-    if (is_key_down(SDL_SCANCODE_F11)) {
+    if (window != nullptr && is_key_down(SDL_SCANCODE_F11)) {
         press_up_key(SDL_SCANCODE_F11);
 
         Uint32 flags = SDL_GetWindowFlags(window);

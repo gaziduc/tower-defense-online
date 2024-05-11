@@ -54,7 +54,7 @@ std::shared_ptr<Animation> Constants::get_animation(Anim anim) {
 }
 
 void Constants::load_fonts(SDL_Window *window) {
-    TTF_Font* font = TTF_OpenFont("resources/fonts/bebasneue-regular.ttf", 70);
+    TTF_Font* font = TTF_OpenFont("resources/fonts/liberation-sans-bold.ttf", 55);
     if (font == nullptr) {
         ErrorUtils::display_last_ttf_error_and_quit(window);
     }

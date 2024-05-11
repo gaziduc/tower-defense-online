@@ -9,6 +9,7 @@
 #include <windows.h>
 #endif
 
+#include <iostream>
 #include <sstream>
 
 #include "Animation.h"
@@ -27,7 +28,7 @@
 
 void send_new_entity_to_server(TCPsocket socket, Entity::EntityType type, Entity::EntityDirection direction, int row_num);
 void send_time_message_to_server(TCPsocket socket, Uint32 time);
-Uint32 handle_server_actions(SDL_Window* window, SDLNet_SocketSet socket_set, TCPsocket socket, Player& player, Player& enemy_player, int latency);
+Uint32 handle_server_actions(SDL_Window* window, SDLNet_SocketSet socket_set, TCPsocket socket, Player& player, Player& enemy_player, Uint32 latency_frames);
 void pop_back_utf8(std::string& utf8_str);
 
 int main(int argc, char *argv[]) {
@@ -175,11 +176,11 @@ int main(int argc, char *argv[]) {
 
         std::string enter_ip = "Enter the server IPv4 address or hostname, and the server port.";
         std::string example = "Example: 192.168.1.86:7777";
-        dst_pos = {.x = Constants::SDL_POS_X_CENTERED, .y = 400, .w = 0, .h = 0};
+        dst_pos = {.x = Constants::SDL_POS_X_CENTERED, .y = 410, .w = 0, .h = 0};
         RenderUtils::render_text(window, renderer, enter_ip, &dst_pos, {.r = 255, .g = 255, .b = 255, .a = SDL_ALPHA_OPAQUE}, ratio_x, ratio_y);
-        dst_pos = {.x = Constants::SDL_POS_X_CENTERED, .y = 500, .w = 0, .h = 0};
+        dst_pos = {.x = Constants::SDL_POS_X_CENTERED, .y = 510, .w = 0, .h = 0};
         RenderUtils::render_text(window, renderer, example, &dst_pos, {.r = 255, .g = 255, .b = 255, .a = SDL_ALPHA_OPAQUE}, ratio_x, ratio_y);
-        dst_pos = {.x = Constants::SDL_POS_X_CENTERED, .y = 600, .w = 0, .h = 0};
+        dst_pos = {.x = Constants::SDL_POS_X_CENTERED, .y = 610, .w = 0, .h = 0};
         RenderUtils::render_text_prompt(window, renderer, input, &dst_pos, {.r = 255, .g = 255, .b = 255, .a = SDL_ALPHA_OPAQUE}, ratio_x, ratio_y);
         SDL_RenderPresent(renderer);
 
@@ -191,17 +192,6 @@ int main(int argc, char *argv[]) {
     Player player(Constants::INITIAL_PLAYER_HEALTH, Constants::INITIAL_PLAYER_MONEY);
     Player enemy_player(Constants::INITIAL_PLAYER_HEALTH, Constants::INITIAL_PLAYER_MONEY);
 
-    Uint32 send_ticks = SDL_GetTicks();
-    send_time_message_to_server(socket, send_ticks);
-
-    Uint32 recv_server_ticks = 0;
-    while (recv_server_ticks == 0) {
-        recv_server_ticks = handle_server_actions(window, socket_set, socket, player, enemy_player, 0);
-    }
-
-    Uint32 recv_ticks = SDL_GetTicks();
-    Uint32 latency = (recv_ticks - send_ticks) / 2;
-
 
     bool game_started = false;
     while (!game_started) {
@@ -210,7 +200,7 @@ int main(int argc, char *argv[]) {
             exit(0);
         }
 
-        handle_server_actions(window, socket_set, socket, player, enemy_player, latency);
+        handle_server_actions(window, socket_set, socket, player, enemy_player, 0);
         if (player.get_direction() != Entity::UNDEFINED && enemy_player.get_direction() != Entity::UNDEFINED) {
             game_started = true;
         }
@@ -227,7 +217,7 @@ int main(int argc, char *argv[]) {
         SDL_RenderFillRectF(renderer, &dst_pos);
 
         std::string waiting_text = "Waiting for another player...";
-        dst_pos = {.x = Constants::SDL_POS_X_CENTERED, .y = 500, .w = 0, .h = 0};
+        dst_pos = {.x = Constants::SDL_POS_X_CENTERED, .y = 510, .w = 0, .h = 0};
         RenderUtils::render_text(window, renderer, waiting_text, &dst_pos, {.r = 255, .g = 255, .b = 255, .a = SDL_ALPHA_OPAQUE}, ratio_x, ratio_y);
         SDL_RenderPresent(renderer);
 
@@ -236,6 +226,9 @@ int main(int argc, char *argv[]) {
     }
 
     std::vector<std::pair<TCPsocket, Player>> dummy_vect;
+    Uint32 latency_frames = 0;
+    Uint32 send_ticks = 0;
+    bool received_server_time = true;
 
     while (player.get_health() > 0 && enemy_player.get_health() > 0) {
         // Handle event
@@ -244,7 +237,18 @@ int main(int argc, char *argv[]) {
             break;
         }
 
-        handle_server_actions(window, socket_set, socket, player, enemy_player, latency);
+        if (received_server_time && fps_manager.framecount % 900 == 0) {
+            send_ticks = SDL_GetTicks();
+            send_time_message_to_server(socket, send_ticks);
+            received_server_time = false;
+        }
+
+        Uint32 recv_ticks = handle_server_actions(window, socket_set, socket, player, enemy_player, latency_frames);
+        if (recv_ticks > 0) {
+            float latency_milliseconds = static_cast<float>(SDL_GetTicks() - send_ticks) / 2;
+            latency_frames = static_cast<Uint32>(latency_milliseconds / fps_manager.rateticks);
+            received_server_time = true;
+        }
 
         SDL_Point window_size;
         SDL_GetWindowSize(window, &window_size.x, &window_size.y);
@@ -367,7 +371,7 @@ int main(int argc, char *argv[]) {
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 128);
         SDL_RenderFillRectF(renderer, &dst_pos);
 
-        dst_pos = {.x = Constants::SDL_POS_X_CENTERED, .y = 500, .w = 0, .h = 0};
+        dst_pos = {.x = Constants::SDL_POS_X_CENTERED, .y = 510, .w = 0, .h = 0};
         std::string end_str(player.get_health() <= 0 ? "You lost!" : "You won!");
         RenderUtils::render_text(window, renderer, end_str, &dst_pos, {.r = 255, .g = 255, .b = 255, .a = SDL_ALPHA_OPAQUE}, ratio_x, ratio_y);
 
@@ -412,15 +416,13 @@ void send_time_message_to_server(TCPsocket socket, Uint32 time) {
 }
 
 
-Uint32 handle_server_actions(SDL_Window* window, SDLNet_SocketSet socket_set, TCPsocket socket, Player& player, Player& enemy_player, int latency_frames) {
+Uint32 handle_server_actions(SDL_Window* window, SDLNet_SocketSet socket_set, TCPsocket socket, Player& player, Player& enemy_player, Uint32 latency_frames) {
     int sockets_ready_for_reading = SDLNet_CheckSockets(socket_set, 0);
     if (sockets_ready_for_reading == -1) {
         ErrorUtils::display_last_net_error_and_quit(window);
     }
 
     if (sockets_ready_for_reading > 0) {
-        std::vector<std::string> splitted_messages;
-
         // Read from server
         char data[ServerConstants::MAX_MESSAGE_SIZE] = { 0 };
         int received_bytes = SDLNet_TCP_Recv(socket, data, ServerConstants::MAX_MESSAGE_SIZE);
