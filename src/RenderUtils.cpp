@@ -21,23 +21,23 @@ void RenderUtils::render_animation_entity_ex(SDL_Renderer* renderer, Constants::
     animation_entity->goto_next_texture_index();
 }
 
-void RenderUtils::render_text_prompt(SDL_Window* window, SDL_Renderer* renderer, std::string& text, SDL_FRect* dst_pos, SDL_Color fg_color, float ratio_x, float ratio_y) {
-    float w = render_text(window, renderer, text, dst_pos, fg_color,  ratio_x, ratio_y);
+void RenderUtils::render_text_prompt(SDL_Window* window, SDL_Renderer* renderer, std::string& text, SDL_FRect* dst_pos, Constants::Font font, SDL_Color fg_color, float ratio_x, float ratio_y) {
+    float w = render_text(window, renderer, text, dst_pos, font, fg_color,  ratio_x, ratio_y);
     if (SDL_GetTicks64() % 1000 < 500) {
         if (dst_pos->x == Constants::SDL_POS_X_CENTERED) {
             dst_pos->x = Constants::VIEWPORT_WIDTH / 2 + w / 2;
         }
 
         std::string prompt("_");
-        render_text(window, renderer, prompt, dst_pos, fg_color, ratio_x, ratio_y);
+        render_text(window, renderer, prompt, dst_pos, font, fg_color, ratio_x, ratio_y);
     }
 }
 
-float RenderUtils::render_text(SDL_Window* window, SDL_Renderer* renderer, std::string& text, SDL_FRect* dst_pos, SDL_Color fg_color, float ratio_x, float ratio_y) {
+float RenderUtils::render_text(SDL_Window* window, SDL_Renderer* renderer, std::string& text, SDL_FRect* dst_pos, Constants::Font font, SDL_Color fg_color, float ratio_x, float ratio_y) {
     if (text.empty()) {
         return 0;
     }
-    SDL_Surface *text_surface = TTF_RenderText_Blended(Constants::get_font(Constants::NORMAL), text.c_str(), fg_color);
+    SDL_Surface *text_surface = TTF_RenderText_Blended(Constants::get_font(font), text.c_str(), fg_color);
     if (text_surface == nullptr) {
         ErrorUtils::display_last_sdl_error_and_quit(window);
     }
@@ -63,18 +63,26 @@ float RenderUtils::render_text(SDL_Window* window, SDL_Renderer* renderer, std::
     return w;
 }
 
-void RenderUtils::render_animation_entity_with_text(SDL_Window* window, SDL_Renderer* renderer, Constants::Anim anim, std::string& text, SDL_FRect* dst_pos, float ratio_x, float ratio_y) {
+void RenderUtils::render_animation_entity_with_text(SDL_Window* window, SDL_Renderer* renderer, Constants::Anim anim, std::string& text, Constants::Font font, SDL_FRect* dst_pos, float ratio_x, float ratio_y) {
     SDL_FRect old_dst_pos = {.x = dst_pos->x, .y = dst_pos->y, .w = dst_pos->w, .h = dst_pos->h};
     dst_pos->x *= ratio_x;
     dst_pos->y *= ratio_y;
     dst_pos->w *= ratio_x;
     dst_pos->h *= ratio_y;
     render_animation_entity(renderer, anim, dst_pos);
-    dst_pos->x = old_dst_pos.x + old_dst_pos.w + 20;
-    dst_pos->y = old_dst_pos.y + 8; // FIXME
+    dst_pos->x = old_dst_pos.x + old_dst_pos.w;
+    if (font == Constants::NORMAL) {
+        dst_pos->x += 20;
+    } else {
+        dst_pos->x += 5;
+    }
+    dst_pos->y = old_dst_pos.y;
+    if (font == Constants::NUMBER_SMALL) {
+        dst_pos->y += 5;
+    }
     dst_pos->w = old_dst_pos.w;
     dst_pos->h = old_dst_pos.h;
-    render_text(window, renderer, text, dst_pos, {.r = 0, .g = 0, .b = 0, .a = SDL_ALPHA_OPAQUE}, ratio_x, ratio_y);
+    render_text(window, renderer, text, dst_pos, font, {.r = 0, .g = 0, .b = 0, .a = SDL_ALPHA_OPAQUE}, ratio_x, ratio_y);
     dst_pos->x = old_dst_pos.x;
     dst_pos->y = old_dst_pos.y;
 }

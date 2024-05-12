@@ -37,13 +37,17 @@ public:
         COIN,
         HEALTH,
         ARROW,
+        MINI_COINS,
 
         NUM_ANIM
     };
 
     enum Font {
+        EXTRA_SMALL = 0,
+        SMALL,
         NORMAL,
-
+        NUMBER_SMALL,
+        NUMBER_NORMAL,
         NUM_FONT
     };
 
@@ -61,7 +65,7 @@ public:
     static constexpr float HEALTH_BAR_WIDTH = 80;
     static constexpr float HEALTH_BAR_HEIGHT = 5;
     static constexpr float SDL_POS_X_CENTERED = -420000;
-    static constexpr int INITIAL_PLAYER_HEALTH = 500;
+    static constexpr int INITIAL_PLAYER_HEALTH = 1000;
     static constexpr int INITIAL_PLAYER_MONEY = 200;
 
     // Network

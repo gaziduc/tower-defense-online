@@ -47,6 +47,9 @@ void Constants::load_animations(SDL_Window *window, SDL_Renderer *renderer) {
 
     AnimationEntity arrow(window, renderer, "resources/images/arrow.gif");
     _anims.push_back(std::make_shared<AnimationEntity>(arrow));
+
+    AnimationEntity mini_coins(window, renderer, "resources/images/mini-coins.gif");
+    _anims.push_back(std::make_shared<AnimationEntity>(mini_coins));
 }
 
 std::shared_ptr<Animation> Constants::get_animation(Anim anim) {
@@ -54,12 +57,35 @@ std::shared_ptr<Animation> Constants::get_animation(Anim anim) {
 }
 
 void Constants::load_fonts(SDL_Window *window) {
-    TTF_Font* font = TTF_OpenFont("resources/fonts/liberation-sans-bold.ttf", 55);
-    if (font == nullptr) {
+    TTF_Font* font_extra_small = TTF_OpenFont("resources/fonts/liberation-sans-bold.ttf", 20);
+    if (font_extra_small == nullptr) {
         ErrorUtils::display_last_ttf_error_and_quit(window);
     }
+    _fonts.push_back(font_extra_small);
 
-    _fonts.push_back(font);
+    TTF_Font* font_small = TTF_OpenFont("resources/fonts/liberation-sans-bold.ttf", 25);
+    if (font_small == nullptr) {
+        ErrorUtils::display_last_ttf_error_and_quit(window);
+    }
+    _fonts.push_back(font_small);
+
+    TTF_Font* font_normal = TTF_OpenFont("resources/fonts/liberation-sans-bold.ttf", 55);
+    if (font_normal == nullptr) {
+        ErrorUtils::display_last_ttf_error_and_quit(window);
+    }
+    _fonts.push_back(font_normal);
+
+    TTF_Font* number_small = TTF_OpenFont("resources/fonts/bebasneue-regular.ttf", 25);
+    if (number_small == nullptr) {
+        ErrorUtils::display_last_ttf_error_and_quit(window);
+    }
+    _fonts.push_back(number_small);
+
+    TTF_Font* number_normal = TTF_OpenFont("resources/fonts/bebasneue-regular.ttf", 70);
+    if (number_normal == nullptr) {
+        ErrorUtils::display_last_ttf_error_and_quit(window);
+    }
+    _fonts.push_back(number_normal);
 }
 
 TTF_Font* Constants::get_font(Font font) {

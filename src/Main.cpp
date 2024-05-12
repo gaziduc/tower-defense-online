@@ -79,13 +79,13 @@ int main(int argc, char *argv[]) {
         ErrorUtils::display_last_net_error_and_quit(window);
     }
 
-
     Mix_Music* music = Mix_LoadMUS("resources/audio/glorious_morning.mp3");
     if (music == nullptr) {
         ErrorUtils::display_last_mix_error_and_quit(window);
     }
 
     Mix_PlayMusic(music, -1);
+    Mix_VolumeMusic(MIX_MAX_VOLUME / 6);
 
     // Load resources
     Constants::load_animations(window, renderer);
@@ -176,12 +176,12 @@ int main(int argc, char *argv[]) {
 
         std::string enter_ip = "Enter the server IPv4 address or hostname, and the server port.";
         std::string example = "Example: 192.168.1.86:7777";
-        dst_pos = {.x = Constants::SDL_POS_X_CENTERED, .y = 410, .w = 0, .h = 0};
-        RenderUtils::render_text(window, renderer, enter_ip, &dst_pos, {.r = 255, .g = 255, .b = 255, .a = SDL_ALPHA_OPAQUE}, ratio_x, ratio_y);
-        dst_pos = {.x = Constants::SDL_POS_X_CENTERED, .y = 510, .w = 0, .h = 0};
-        RenderUtils::render_text(window, renderer, example, &dst_pos, {.r = 255, .g = 255, .b = 255, .a = SDL_ALPHA_OPAQUE}, ratio_x, ratio_y);
-        dst_pos = {.x = Constants::SDL_POS_X_CENTERED, .y = 610, .w = 0, .h = 0};
-        RenderUtils::render_text_prompt(window, renderer, input, &dst_pos, {.r = 255, .g = 255, .b = 255, .a = SDL_ALPHA_OPAQUE}, ratio_x, ratio_y);
+        dst_pos = {.x = Constants::SDL_POS_X_CENTERED, .y = 420, .w = 0, .h = 0};
+        RenderUtils::render_text(window, renderer, enter_ip,  &dst_pos, Constants::NORMAL, {.r = 255, .g = 255, .b = 255, .a = SDL_ALPHA_OPAQUE}, ratio_x, ratio_y);
+        dst_pos = {.x = Constants::SDL_POS_X_CENTERED, .y = 520, .w = 0, .h = 0};
+        RenderUtils::render_text(window, renderer, example, &dst_pos, Constants::SMALL, {.r = 255, .g = 255, .b = 255, .a = SDL_ALPHA_OPAQUE}, ratio_x, ratio_y);
+        dst_pos = {.x = Constants::SDL_POS_X_CENTERED, .y = 620, .w = 0, .h = 0};
+        RenderUtils::render_text_prompt(window, renderer, input, &dst_pos, Constants::NORMAL, {.r = 255, .g = 255, .b = 255, .a = SDL_ALPHA_OPAQUE}, ratio_x, ratio_y);
         SDL_RenderPresent(renderer);
 
         SDL_framerateDelay(&fps_manager);
@@ -216,11 +216,17 @@ int main(int argc, char *argv[]) {
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 128);
         SDL_RenderFillRectF(renderer, &dst_pos);
 
-        std::string waiting_text = "Waiting for another player...";
-        dst_pos = {.x = Constants::SDL_POS_X_CENTERED, .y = 510, .w = 0, .h = 0};
-        RenderUtils::render_text(window, renderer, waiting_text, &dst_pos, {.r = 255, .g = 255, .b = 255, .a = SDL_ALPHA_OPAQUE}, ratio_x, ratio_y);
+        std::string waiting_text = "Waiting for another player";
+        std::string text_anim;
+        Uint64 temp = (fps_manager.framecount % 60) / 15;
+        for (Uint64 i = 0; i < temp; i++) {
+            text_anim += '.';
+        }
+        dst_pos = {.x = Constants::SDL_POS_X_CENTERED, .y = 470, .w = 0, .h = 0};
+        RenderUtils::render_text(window, renderer, waiting_text, &dst_pos, Constants::NORMAL, {.r = 255, .g = 255, .b = 255, .a = SDL_ALPHA_OPAQUE}, ratio_x, ratio_y);
+        dst_pos = {.x = Constants::SDL_POS_X_CENTERED, .y = 570, .w = 0, .h = 0};
+        RenderUtils::render_text(window, renderer, text_anim, &dst_pos, Constants::NORMAL, {.r = 255, .g = 255, .b = 255, .a = SDL_ALPHA_OPAQUE}, ratio_x, ratio_y);
         SDL_RenderPresent(renderer);
-
 
         SDL_framerateDelay(&fps_manager);
     }
@@ -305,11 +311,11 @@ int main(int argc, char *argv[]) {
         // Coins
         dst_pos = { .x = 1680, .y = Constants::BATTLEFIELD_HEIGHT + 20, .w = 80, .h = 80 };
         std::string money_string(std::to_string(player.get_money()));
-        RenderUtils::render_animation_entity_with_text(window, renderer, Constants::COIN, money_string, &dst_pos, ratio_x, ratio_y);
+        RenderUtils::render_animation_entity_with_text(window, renderer, Constants::COIN, money_string, Constants::NUMBER_NORMAL, &dst_pos, ratio_x, ratio_y);
         // Health
         dst_pos = { .x = 1680, .y = Constants::BATTLEFIELD_HEIGHT + 100, .w = 80, .h = 80 };
         std::string health_string(std::to_string(player.get_health()));
-        RenderUtils::render_animation_entity_with_text(window, renderer, Constants::HEALTH, health_string, &dst_pos, ratio_x, ratio_y);
+        RenderUtils::render_animation_entity_with_text(window, renderer, Constants::HEALTH, health_string, Constants::NUMBER_NORMAL, &dst_pos, ratio_x, ratio_y);
 
         if (row_num >= 0 && row_num < Constants::NUM_BATTLE_ROWS) {
             SDL_SetRenderDrawColor(renderer, 128, 128, 128,64);
@@ -343,7 +349,24 @@ int main(int argc, char *argv[]) {
         dst_pos = {.x = x + 20, .y = y + 20 , .w = 0, .h = 64};
         Constants::Anim cursor_anim = static_cast<Constants::Anim>(player.get_selected_entity_type() * Constants::NUM_STATE_PER_ENTITY + 3);
         dst_pos.w = dst_pos.h * dynamic_cast<AnimationEntity*>(Constants::get_animation(cursor_anim).get())->get_ratio();
-        RenderUtils::render_animation_entity(renderer, cursor_anim, &dst_pos);
+        RenderUtils::render_animation_entity_ex(renderer, cursor_anim, &dst_pos, 0, nullptr, player.get_direction() == Entity::LEFT_TO_RIGHT ? SDL_FLIP_NONE : SDL_FLIP_HORIZONTAL);
+
+        dst_pos.x += dst_pos.w + 10;
+
+
+        float temp_dst_pos_x = dst_pos.x;
+        int cost = Entity::get_cost(player.get_selected_entity_type());
+        std::string cost_text = std::to_string(cost);
+        dst_pos.w = 40;
+        dst_pos.h = 40;
+        RenderUtils::render_animation_entity_with_text(window, renderer, Constants::MINI_COINS, cost_text, Constants::NUMBER_SMALL, &dst_pos, 1, 1);
+        if (cost > player.get_money()) {
+            dst_pos.y += 32;
+            dst_pos.x = temp_dst_pos_x;
+            std::string not_enough_money = "Not enough money...";
+            RenderUtils::render_text(window, renderer, not_enough_money, &dst_pos, Constants::EXTRA_SMALL, {.r = 255, .g = 0, .b = 0, .a = SDL_ALPHA_OPAQUE}, 1, 1);
+        }
+
 
         SDL_RenderPresent(renderer);
 
@@ -371,9 +394,9 @@ int main(int argc, char *argv[]) {
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 128);
         SDL_RenderFillRectF(renderer, &dst_pos);
 
-        dst_pos = {.x = Constants::SDL_POS_X_CENTERED, .y = 510, .w = 0, .h = 0};
+        dst_pos = {.x = Constants::SDL_POS_X_CENTERED, .y = 520, .w = 0, .h = 0};
         std::string end_str(player.get_health() <= 0 ? "You lost!" : "You won!");
-        RenderUtils::render_text(window, renderer, end_str, &dst_pos, {.r = 255, .g = 255, .b = 255, .a = SDL_ALPHA_OPAQUE}, ratio_x, ratio_y);
+        RenderUtils::render_text(window, renderer, end_str, &dst_pos, Constants::NORMAL, {.r = 255, .g = 255, .b = 255, .a = SDL_ALPHA_OPAQUE}, ratio_x, ratio_y);
 
         SDL_RenderPresent(renderer);
 
